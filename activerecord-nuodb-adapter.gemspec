@@ -8,7 +8,7 @@ Gem::Specification.new do |gem|
   gem.email = %w(support@nuodb.com)
   gem.description = %q{An adapter for ActiveRecord and AREL to support the NuoDB distributed database backend.}
   gem.summary = %q{ActiveRecord adapter with AREL support for NuoDB.}
-  gem.homepage = 'http://www.nuodb.com/'
+  gem.homepage = 'http://nuodb.github.com/ruby-activerecord-nuodb-adapter/'
   gem.license = 'BSD'
 
   gem.rdoc_options = %w(--charset=UTF-8)
