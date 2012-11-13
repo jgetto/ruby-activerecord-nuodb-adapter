@@ -1,0 +1,49 @@
+= NuoDB/ActiveRecord Adapter
+
+== DESCRIPTION
+
+This is the NuoDB ActiveRecord Adapter.
+
+== BUILDING THE GEM
+
+To compile and test run this command:
+
+    rake clean build
+
+== INSTALLING THE GEM
+
+    gem install activerecord-nuodb-adapter-1.0.0.rc.1.gem
+
+Or from the source tree:
+
+    gem install pkg/activerecord-nuodb-adapter-1.0.0.rc.1.gem
+
+Or you can do this using Rake:
+
+    rake clean build uninstall install
+
+== TESTING THE GEM
+
+Start up a minimal chorus as follows:
+
+    java -jar ${NUODB_ROOT}/jar/nuoagent.jar --broker &
+    ${NUODB_ROOT}/bin/nuodb --chorus test --password bar --dba-user dba --dba-password baz &
+
+Create a user in the database:
+
+    ${NUODB_ROOT}/bin/nuosql test@localhost --user dba --password baz
+    > create user cloud password 'user';
+    > exit
+
+Run the tests:
+
+    rake test
+
+== INSPECTING THE GEM
+
+It is often useful to inspect the contents of a Gem before distribution.
+To do this you dump the contents of a gem thus:
+
+    gem unpack pkg/activerecord-nuodb-adapter-1.0.0.rc.1.gem
+
+== REFERENCES
