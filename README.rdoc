@@ -1,4 +1,4 @@
-= NuoDB/ActiveRecord Adapter
+= Ruby ActiveRecord NuoDB Adapter
 
 == DESCRIPTION
 

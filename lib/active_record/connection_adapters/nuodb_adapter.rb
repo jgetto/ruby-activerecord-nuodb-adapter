@@ -35,7 +35,6 @@ require 'active_record/connection_adapters/nuodb/version'
 require 'arel/visitors/bind_visitor'
 require 'active_support/core_ext/hash/keys'
 
-gem 'nuodb', '~> 0.2.0'
 require 'nuodb'
 
 module ActiveRecord
