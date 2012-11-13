@@ -46,6 +46,7 @@ Run the tests:
 Tag the product using tags per the SemVer specification; our tags have a v-prefix:
 
     git tag -a v1.0.0-rc.1 -m "SemVer Version: v1.0.0-rc.1"
+    git push --tags
 
 If you make a mistake, take it back quickly:
 
