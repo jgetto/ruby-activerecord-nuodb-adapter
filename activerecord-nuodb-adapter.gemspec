@@ -17,7 +17,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency('activerecord', '~> 3.2.8')
   gem.add_development_dependency('rake', '~> 0.9')
   gem.add_development_dependency('rdoc', '~> 3.10')
-  gem.add_dependency('nuodb', '~> 1.0.0.rc.1')
+  gem.add_dependency('nuodb', '~> 1.0.0.rc.2')
 
   gem.files = `git ls-files`.split($\)
   gem.test_files = gem.files.grep(%r{^(test|spec|features)/})
