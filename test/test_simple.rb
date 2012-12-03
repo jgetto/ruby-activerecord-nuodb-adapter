@@ -37,7 +37,7 @@ class User < ActiveRecord::Base
 
   def to_s
     return "User(#{@id}), Username: #{@user_name}, Name: #{@first_name} #{@last_name}, #{@admin ? "admin" : "member"}\n" +
-      "  Address: #{@addr}\n"
+        "  Address: #{@addr}\n"
   end
 end
 
@@ -54,12 +54,12 @@ class NuoSimpleTest < Test::Unit::TestCase
   def setup()
 
     ActiveRecord::Base.establish_connection(
-                                            :adapter => 'nuodb',
-                                            :database => 'test',
-                                            :schema => 'test',
-                                            :username => 'cloud',
-                                            :password => 'user'
-                                            )
+        :adapter => 'nuodb',
+        :database => 'test',
+        :schema => 'test',
+        :username => 'cloud',
+        :password => 'user'
+    )
 
     ActiveRecord::Schema.drop_table(User.table_name) rescue nil
 
@@ -72,6 +72,7 @@ class NuoSimpleTest < Test::Unit::TestCase
         t.string :email, :limit => 20
         t.string :user_name, :limit => 20
         t.boolean :admin
+        t.time :created
       end
       create_table Addr.table_name do |t|
         t.integer :user_id
@@ -83,7 +84,6 @@ class NuoSimpleTest < Test::Unit::TestCase
 
   end
 
-
   def test_create_user_records
 
     fred = User.create do |u|
@@ -92,10 +92,12 @@ class NuoSimpleTest < Test::Unit::TestCase
       u.email = "fredf@example.com"
       u.user_name = "fred"
       u.admin = true
+      u.created = Time.utc(2000, 1, 1, 10, 35, 50)
     end
 
     assert_not_nil fred
     assert_not_nil fred.id
+    assert_equal Time.utc(2000, 1, 1, 10, 35, 50), fred.created
 
     fred.create_addr do |a|
       a.street = "301 Cobblestone Way"
@@ -130,21 +132,21 @@ class NuoSimpleTest < Test::Unit::TestCase
 
     mask = 0
     User.find do |entry|
-      case entry.id 
-      when fred.id
-        assert_equal 'Fred', entry.first_name
-        assert_equal 'Flintstone', entry.last_name
-        assert_equal '301 Cobblestone Way', entry.addr.street
-        mask += 1
-        nil
-      when barney.id
-        assert_equal 'Barney', entry.first_name
-        assert_equal 'Rubble', entry.last_name
-        assert_equal '303 Cobblestone Way', entry.addr.street
-        mask += 10
-        nil
-      else
-        raise "unknown entry.id: #{entry.id}"
+      case entry.id
+        when fred.id
+          assert_equal 'Fred', entry.first_name
+          assert_equal 'Flintstone', entry.last_name
+          assert_equal '301 Cobblestone Way', entry.addr.street
+          mask += 1
+          nil
+        when barney.id
+          assert_equal 'Barney', entry.first_name
+          assert_equal 'Rubble', entry.last_name
+          assert_equal '303 Cobblestone Way', entry.addr.street
+          mask += 10
+          nil
+        else
+          raise "unknown entry.id: #{entry.id}"
       end
     end
 
@@ -155,26 +157,37 @@ class NuoSimpleTest < Test::Unit::TestCase
       entry.last_name = entry.last_name.upcase
       # TODO entry.admin = !entry.admin
       entry.addr.street = entry.addr.street.upcase
-      entry.addr.save 
+      entry.addr.save
       entry.save
     end
 
     assert_equal 2, User.count
 
     User.find do |entry|
-      case entry.id 
-      when fred.id
-        assert_equal 'FRED', entry.first_name
-        assert_equal '301 COBBLESTONE WAY', entry.addr.street
-        nil
-      when barney.id
-        assert_equal 'BARNEY', entry.first_name
-        assert_equal '303 COBBLESTONE WAY', entry.addr.street
-        nil
-      else
-        raise 'unknown entry.id'
+      case entry.id
+        when fred.id
+          assert_equal 'FRED', entry.first_name
+          assert_equal '301 COBBLESTONE WAY', entry.addr.street
+          nil
+        when barney.id
+          assert_equal 'BARNEY', entry.first_name
+          assert_equal '303 COBBLESTONE WAY', entry.addr.street
+          nil
+        else
+          raise 'unknown entry.id'
       end
     end
+
+    User.default_timezone = :utc
+    attributes = {"created(1i)" => "2000",
+                  "created(2i)" => "1",
+                  "created(3i)" => "1",
+                  "created(4i)" => "10",
+                  "created(5i)" => "35",
+                  "created(6i)" => "50"}
+    user = User.new(attributes)
+    assert_equal Time.utc(2000, 1, 1, 10, 35, 50), user.created
+    User.default_timezone = :local
 
   end
 
