@@ -245,7 +245,7 @@ module ActiveRecord
       # FEATURES ===============================================
 
       def supports_migrations?
-        false
+        true
       end
 
       def supports_primary_key?
