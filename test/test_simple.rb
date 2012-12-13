@@ -28,7 +28,7 @@
 
 $:.unshift File.expand_path(File.join(File.dirname(__FILE__), '../lib'))
 
-require "test/unit"
+require 'test/unit'
 require 'rubygems'
 require 'active_record'
 
@@ -45,7 +45,7 @@ class Addr < ActiveRecord::Base
   belongs_to :User
 
   def to_s
-    return "Addr(#{@id}:#{@user_id}) Street: #{@street} City: #{@city} Zip: #{@zip}"
+    "Addr(#{@id}:#{@user_id}) Street: #{@street} City: #{@city} Zip: #{@zip}"
   end
 end
 

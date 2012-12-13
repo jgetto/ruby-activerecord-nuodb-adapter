@@ -49,6 +49,7 @@ module ActiveRecord
       end
       # supply configuration defaults
       config.reverse_merge! :host => 'localhost'
+      config.reverse_merge! :timezone => 'UTC'
       ConnectionAdapters::NuoDBAdapter.new nil, logger, nil, config
     end
 
@@ -248,7 +249,7 @@ module ActiveRecord
       end
 
       def supports_primary_key?
-        false
+        true
       end
 
       def supports_count_distinct?
@@ -595,12 +596,22 @@ module ActiveRecord
         "'false'"
       end
 
+      def quoted_date(value)
+        if value.acts_like?(:time)
+          zone_conversion_method = :getutc
+          if value.respond_to?(zone_conversion_method)
+            value = value.send(zone_conversion_method)
+          end
+        end
+        value.to_s(:db)
+      end
+
       # DATABASE STATEMENTS ####################################
 
       public
 
       def outside_transaction?
-        false
+        nil
       end
 
       def supports_statement_cache?

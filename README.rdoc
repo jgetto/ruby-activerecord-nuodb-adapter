@@ -4,6 +4,77 @@
 
 This is the NuoDB ActiveRecord Adapter.
 
+== RUNNING A SAMPLE APPLICATION
+
+Let me walk you through the creation of a sample Ruby application to the point
+of having it running against NuoDB...
+
+Start up a minimal chorus as follows:
+
+    export NUODB_ROOT=/Users/Path/To/NuoDB
+    java -jar ${NUODB_ROOT}/jar/nuoagent.jar --broker &
+    ${NUODB_ROOT}/bin/nuodb --chorus test --password bar --dba-user dba --dba-password baz --verbose debug --archive /var/tmp/nuodb --initialize --force &
+    ${NUODB_ROOT}/bin/nuodb --chorus test --password bar --dba-user dba --dba-password baz &
+
+Create a user in the database:
+
+    ${NUODB_ROOT}/bin/nuosql test@localhost --user dba --password baz
+    > create user cloud password 'user';
+    > exit
+
+Install our Gems; the following shows how to do this if you have copies
+of the gems locally, but is easier if you install them from rubygems.org.
+
+    gem install nuodb-1.0.0.rc.2.gem
+    gem install activerecord-nuodb-adapter-1.0.0.rc.2.gem
+
+Prepare a sample application:
+
+    rails new slambook
+    cd slambook/
+
+Add the following Gems to your Gemfile:
+
+    gem 'nuodb', '=1.0.0.rc.2'
+    gem 'activerecord-nuodb-adapter', '=1.0.0.rc.2'
+
+Update your config/database.yml file as follows:
+
+    development:
+      adapter: nuodb
+      database: test@localhost
+      username: cloud
+      password: user
+      schema: test
+
+    test:
+      adapter: nuodb
+      database: test@localhost
+      username: cloud
+      password: user
+      schema: test
+
+    production:
+      adapter: nuodb
+      database: test@localhost
+      username: cloud
+      password: user
+      schema: test
+
+6. Build the application and prepare your databases:
+
+    bundle install
+    rake db:create
+    rake db:migrate
+
+7. Start the Rails server:
+
+    bundle exec rails server
+
+8. Open up your browser:
+
+    chrome http://localhost:3000
+
 == BUILDING THE GEM
 
 To compile and test run this command:
@@ -85,7 +156,7 @@ Run equivalent commands to the following to set up your environment:
     export PATH=${NUODB_ROOT}/bin:${PATH}
 
 Start up NuoDB as follows:
-    
+
     java -jar ${NUODB_ROOT}/jar/nuoagent.jar --broker &
     ${NUODB_ROOT}/bin/nuodb --chorus arunit --password bar --dba-user dba --dba-password baz --force &
 
