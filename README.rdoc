@@ -25,8 +25,8 @@ Create a user in the database:
 Install our Gems; the following shows how to do this if you have copies
 of the gems locally, but is easier if you install them from rubygems.org.
 
-    gem install nuodb-1.0.0.rc.2.gem
-    gem install activerecord-nuodb-adapter-1.0.0.rc.2.gem
+    gem install nuodb-1.0.0.gem
+    gem install activerecord-nuodb-adapter-1.0.0.gem
 
 Prepare a sample application:
 
@@ -35,8 +35,8 @@ Prepare a sample application:
 
 Add the following Gems to your Gemfile:
 
-    gem 'nuodb', '=1.0.0.rc.2'
-    gem 'activerecord-nuodb-adapter', '=1.0.0.rc.2'
+    gem 'nuodb', '=1.0.0'
+    gem 'activerecord-nuodb-adapter', '=1.0.0'
 
 Update your config/database.yml file as follows:
 
@@ -83,11 +83,11 @@ To compile and test run this command:
 
 == INSTALLING THE GEM
 
-    gem install activerecord-nuodb-adapter-1.0.0.rc.2.gem
+    gem install activerecord-nuodb-adapter-1.0.0.gem
 
 Or from the source tree:
 
-    gem install pkg/activerecord-nuodb-adapter-1.0.0.rc.2.gem
+    gem install pkg/activerecord-nuodb-adapter-1.0.0.gem
 
 Or you can do this using Rake:
 
@@ -116,26 +116,26 @@ Run the tests:
 
 Tag the product using tags per the SemVer specification; our tags have a v-prefix:
 
-    git tag -a v1.0.0-rc.2 -m "SemVer Version: v1.0.0-rc.2"
+    git tag -a v1.0.0 -m "SemVer Version: v1.0.0"
     git push --tags
 
 If you make a mistake, take it back quickly:
 
-    git tag -d v1.0.0-rc.2
-    git push origin :refs/tags/v1.0.0-rc.2
+    git tag -d v1.0.0
+    git push origin :refs/tags/v1.0.0
 
 ===PUBLISHING
 
 Here are the commands used to publish:
 
-    gem push pkg/nuodb-1.0.0.rc.2.gem
+    gem push pkg/nuodb-1.0.0.gem
 
 == INSPECTING THE GEM
 
 It is often useful to inspect the contents of a Gem before distribution.
 To do this you dump the contents of a gem thus:
 
-    gem unpack pkg/activerecord-nuodb-adapter-1.0.0.rc.2.gem
+    gem unpack pkg/activerecord-nuodb-adapter-1.0.0.gem
 
 == RUNNING ACTIVE RECORD COMPLIANCE TEST SUITES
 
