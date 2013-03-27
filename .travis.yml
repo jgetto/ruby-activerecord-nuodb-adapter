@@ -24,7 +24,7 @@ before_script:
   - echo "create user cloud password 'user';" | ${NUODB_ROOT}/bin/nuosql test@localhost --user dba --password baz
 
 script:
-  - NUODB_ROOT=/opt/nuodb bundle exec rake test install
+  - NUODB_ROOT=/opt/nuodb rake clean build test install
 
 after_script:
   - sudo dpkg -r nuodb
