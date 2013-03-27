@@ -126,7 +126,7 @@ task :build do
 end
 
 task :install => :build do
-  sh %{gem install pkg/#{GEM_NAME}-#{ActiveRecord::ConnectionAdapters::NuoDB::VERSION} --no-rdoc --no-ri}
+  sh %{gem install pkg/#{GEM_NAME}-#{ActiveRecord::ConnectionAdapters::NuoDB::VERSION}.gem --no-rdoc --no-ri}
 end
 
 task :uninstall do
