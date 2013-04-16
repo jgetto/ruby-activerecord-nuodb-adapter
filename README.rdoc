@@ -1,176 +1,42 @@
-= Ruby ActiveRecord NuoDB Adapter
+= Ruby ActiveRecord NuoDB Adapter {<img src="https://secure.travis-ci.org/nuodb/ruby-activerecord-nuodb-adapter.png?branch=master" alt="Continuous Integration Status" />}[http://travis-ci.org/nuodb/ruby-activerecord-nuodb-adapter] {<img src="https://gemnasium.com/nuodb/ruby-activerecord-nuodb-adapter.png?travis" alt="Dependency Status" />}[https://gemnasium.com/nuodb/ruby-activerecord-nuodb-adapter] {<img src="https://codeclimate.com/github/nuodb/ruby-activerecord-nuodb-adapter.png" />}[https://codeclimate.com/github/nuodb/ruby-activerecord-nuodb-adapter]
 
-{<img src="https://secure.travis-ci.org/nuodb/ruby-activerecord-nuodb-adapter.png?branch=master" alt="Continuous Integration Status" />}[http://travis-ci.org/nuodb/ruby-activerecord-nuodb-adapter]
-{<img src="https://gemnasium.com/nuodb/ruby-activerecord-nuodb-adapter.png?travis" alt="Dependency Status" />}[https://gemnasium.com/nuodb/ruby-activerecord-nuodb-adapter]
-{<img src="https://codeclimate.com/github/nuodb/ruby-activerecord-nuodb-adapter.png" />}[https://codeclimate.com/github/nuodb/ruby-activerecord-nuodb-adapter]
+The Ruby ActiveRecord NuoDB Adapter enables the ActiveRecord ORM to work with {NuoDB}[http://nuodb.com/]. Together with the {Ruby NuoDB driver}[https://github.com/nuodb/ruby-nuodb], this gem allows for NuoDB backed Rails applications.
 
-== DESCRIPTION
+Note: At this time the Ruby ActiveRecord NuoDB Adapter does not support Windows.
 
-This is the NuoDB ActiveRecord Adapter.
+== Getting Started
 
-== RUNNING A SAMPLE APPLICATION
+1. If you haven't already, {Download and Install NuoDB}[http://nuodb.com/download-nuodb/]
 
-Let me walk you through the creation of a sample Ruby application to the point
-of having it running against NuoDB...
+2. Add the ActiveRecord NuoDB Adapter to your Gemfile
 
-Start up a minimal chorus as follows:
+    gem 'activerecord-nuodb-adapter'
+    
+3. Use bundler to install
+    
+    bundle install
+    
+4. Use the NuoDB Manager to create your database by starting a Storage Manager (SM) and Transaction Engine (TE)
 
-    export NUODB_ROOT=/Users/Path/To/NuoDB
-    java -jar ${NUODB_ROOT}/jar/nuoagent.jar --broker &
-    ${NUODB_ROOT}/bin/nuodb --chorus test --password bar --dba-user dba --dba-password baz --verbose debug --archive /var/tmp/nuodb --initialize --force &
-    ${NUODB_ROOT}/bin/nuodb --chorus test --password bar --dba-user dba --dba-password baz &
+    java -jar /opt/nuodb/jar/nuodbmanager.jar --broker localhost --user domain --password bird
+    
+    > start process sm host localhost database blog_development archive /var/opt/nuodb/production-archives/blog_development initialize yes
+    > start process te host localhost database blog_development options '--dba-user blog --dba-password bl0gPassw0rd'
 
-Create a user in the database:
-
-    ${NUODB_ROOT}/bin/nuosql test@localhost --user dba --password baz
-    > create user cloud password 'user';
-    > exit
-
-Install our Gems; the following shows how to do this if you have copies
-of the gems locally, but is easier if you install them from rubygems.org.
-
-    gem install nuodb-1.0.0.gem
-    gem install activerecord-nuodb-adapter-1.0.0.gem
-
-Prepare a sample application:
-
-    rails new slambook
-    cd slambook/
-
-Add the following Gems to your Gemfile:
-
-    gem 'nuodb', '=1.0.0'
-    gem 'activerecord-nuodb-adapter', '=1.0.0'
-
-Update your config/database.yml file as follows:
-
+5. Update your config/database.yml file
+    
     development:
       adapter: nuodb
-      database: test@localhost
-      username: cloud
-      password: user
-      schema: test
+      database: blog_development@localhost
+      username: blog
+      password: bl0gPassw0rd
+      schema: blog
 
-    test:
-      adapter: nuodb
-      database: test@localhost
-      username: cloud
-      password: user
-      schema: test
+== More Information
 
-    production:
-      adapter: nuodb
-      database: test@localhost
-      username: cloud
-      password: user
-      schema: test
+* {NuoDB Community Forum}[http://www.nuodb.com/community/forum.php]
+* {NuoDB Online Documentation}[http://www.nuodb.com/community/documentation.php]
 
-6. Build the application and prepare your databases:
+== Contributing
 
-    bundle install
-    rake db:create
-    rake db:migrate
-
-7. Start the Rails server:
-
-    bundle exec rails server
-
-8. Open up your browser:
-
-    chrome http://localhost:3000
-
-== BUILDING THE GEM
-
-To compile and test run this command:
-
-    rake clean build
-
-== INSTALLING THE GEM
-
-    gem install activerecord-nuodb-adapter-1.0.0.gem
-
-Or from the source tree:
-
-    gem install pkg/activerecord-nuodb-adapter-1.0.0.gem
-
-Or you can do this using Rake:
-
-    rake clean build uninstall install
-
-== TESTING THE GEM
-
-Start up a minimal chorus as follows:
-
-    java -jar ${NUODB_ROOT}/jar/nuoagent.jar --broker &
-    ${NUODB_ROOT}/bin/nuodb --chorus test --password bar --dba-user dba --dba-password baz &
-
-Create a user in the database:
-
-    ${NUODB_ROOT}/bin/nuosql test@localhost --user dba --password baz
-    > create user cloud password 'user';
-    > exit
-
-Run the tests:
-
-    rake test
-
-== PUBLISHING THE GEM
-
-=== TAGGING
-
-Tag the product using tags per the SemVer specification; our tags have a v-prefix:
-
-    git tag -a v1.0.0 -m "SemVer Version: v1.0.0"
-    git push --tags
-
-If you make a mistake, take it back quickly:
-
-    git tag -d v1.0.0
-    git push origin :refs/tags/v1.0.0
-
-===PUBLISHING
-
-Here are the commands used to publish:
-
-    gem push pkg/nuodb-1.0.0.gem
-
-== INSPECTING THE GEM
-
-It is often useful to inspect the contents of a Gem before distribution.
-To do this you dump the contents of a gem thus:
-
-    gem unpack pkg/activerecord-nuodb-adapter-1.0.0.gem
-
-== RUNNING ACTIVE RECORD COMPLIANCE TEST SUITES
-
-Install both the NuoDB Ruby Gem and the NuoDB ActiveRecord Adapter Gem:
-
-    gem install nuodb
-    gem install activerecord-nuodb-adapter
-
-You may need to uninstall an earlier version to ensure you only have
-the version you want to install:
-    
-    gem uninstall activerecord-nuodb-adapter
-
-Run equivalent commands to the following to set up your environment:
-
-    export NUODB_AR=1
-    export NUODB_ROOT=/Users/rbuck/tmp/nuodb
-    export PATH=${NUODB_ROOT}/bin:${PATH}
-
-Start up NuoDB as follows:
-
-    java -jar ${NUODB_ROOT}/jar/nuoagent.jar --broker &
-    ${NUODB_ROOT}/bin/nuodb --chorus arunit --password bar --dba-user dba --dba-password baz --force &
-
-Configure your RVM environment:
-
-    cd rails
-    bundle install
-
-Run the test suite as follows:
-
-    cd activerecord
-    ARCONN=nuodb ruby -Itest test/cases/base_test.rb
-
+See {Contribution}[link:CONTRIBUTION.rdoc] for information about contributing to the Ruby ActiveRecord NuoDB Adapter.
