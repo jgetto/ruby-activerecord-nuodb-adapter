@@ -135,8 +135,6 @@ module ActiveRecord
             4
           when /^bigint/i
             8
-          when /\(max\)/, /decimal/, /numeric/
-            nil
           else
             super
         end
@@ -146,6 +144,12 @@ module ActiveRecord
         case field_type
           when /bit/i then
             :boolean
+          when /timestamp/i then
+            :timestamp
+          when /time/i then
+            :time
+          when /date/i then
+            :date
           else
             super
         end
@@ -386,20 +390,49 @@ module ActiveRecord
 
       def change_column(table_name, column_name, type, options = {})
         raise NotImplementedError, "change_column is not implemented"
+        #execute("ALTER TABLE #{quote_table_name(table_name)} #{change_column_sql(table_name, column_name, type, options)}")
       end
 
       def change_column_default(table_name, column_name, default)
         raise NotImplementedError, "change_column_default is not implemented"
+        #column = column_for(table_name, column_name)
+        #change_column table_name, column_name, column.sql_type, :default => default
+      end
+
+      def change_column_null(table_name, column_name, null, default = nil)
+        raise NotImplementedError, "change_column_null is not implemented"
+        #column = column_for(table_name, column_name)
+        #unless null || default.nil?
+        #  execute("UPDATE #{quote_table_name(table_name)} SET #{quote_column_name(column_name)}=#{quote(default)} WHERE #{quote_column_name(column_name)} IS NULL")
+        #end
+        #change_column table_name, column_name, column.sql_type, :null => null
       end
 
       def rename_column(table_name, column_name, new_column_name)
         raise NotImplementedError, "rename_column is not implemented"
+        #execute("ALTER TABLE #{quote_table_name(table_name)} #{rename_column_sql(table_name, column_name, new_column_name)}")
       end
 
       def rename_table(table_name, new_name)
         raise NotImplementedError, "rename_table is not implemented"
+        #execute("RENAME TABLE #{quote_table_name(table_name)} TO #{quote_table_name(new_name)}")
+      end
+      
+      def add_column(table_name, column_name, type, options = {})
+        clear_cache!
+        add_column_sql = "ALTER TABLE #{quote_table_name(table_name)} ADD COLUMN #{quote_column_name(column_name)}"
+        add_column_options!(add_column_sql, options)
+        execute(add_column_sql)
+      end
+      
+      def remove_index!(table_name, index_name) #:nodoc:
+        raise NotImplementedError, "remove_index! is not implemented"
       end
 
+      def rename_index(table_name, old_name, new_name)
+        execute("ALTER INDEX #{quote_column_name(old_name)} RENAME TO #{quote_table_name(new_name)}")
+      end
+      
       def table_exists?(table_name)
         return false unless table_name
 
@@ -519,7 +552,7 @@ module ActiveRecord
             :binary => {:name => 'binary'},
             :boolean => {:name => 'boolean'},
             :date => {:name => 'date'},
-            :datetime => {:name => 'datetime'},
+            :datetime => {:name => 'timestamp'},
             :decimal => {:name => 'decimal'},
             :float => {:name => 'float', :limit => 8},
             :integer => {:name => 'integer'},
@@ -534,21 +567,58 @@ module ActiveRecord
         }
       end
 
+      # jruby version -- no original
+      def modify_types(tp)
+        tp[:primary_key] = 'int not null generated always primary key'
+        tp[:boolean] = {:name => 'boolean'}
+        tp[:date] = {:name => 'date', :limit => nil}
+        tp[:datetime] = {:name => 'timestamp', :limit => nil}
+        tp[:decimal] = {:name => 'decimal'}
+        tp[:integer] = {:name => 'int', :limit => 4}
+        tp[:string] = {:name => 'string'}
+        tp[:time] = {:name => 'time', :limit => nil}
+        tp[:timestamp] = {:name => 'timestamp', :limit => nil}
+        tp
+      end
+
+      # jruby version
       # maps logical rails types to nuodb-specific data types.
       def type_to_sql(type, limit = nil, precision = nil, scale = nil)
         case type.to_s
           when 'integer'
             return 'integer' unless limit
             case limit
-              when 1, 2
+              when 1..2
                 'smallint'
-              when 3, 4
+              when 3..4
                 'integer'
               when 5..8
                 'bigint'
               else
                 raise(ActiveRecordError, "No integer type has byte size #{limit}. Use a numeric with precision 0 instead.")
             end
+          when 'timestamp'
+            column_type_sql = 'timestamp'
+            unless precision.nil?
+              case precision
+                when 0..9
+                  column_type_sql << "(#{precision})"
+                else
+                  nil
+              end
+            end
+            column_type_sql
+          when 'time'
+            column_type_sql = 'time'
+            unless precision.nil?
+              case precision
+                when 0..9
+                  column_type_sql << "(#{precision})"
+                else
+                  nil
+              end
+            end
+            column_type_sql
           else
             super
         end
@@ -610,6 +680,14 @@ module ActiveRecord
 
       public
 
+      def select_rows(sql, name = nil)
+        exec_query(sql, name).rows
+      end
+      
+      def select_values(sql, name = nil)
+        exec_query(sql, name).values
+      end
+
       def outside_transaction?
         nil
       end
@@ -643,7 +721,7 @@ module ActiveRecord
       end
 
       def default_sequence_name(table, column)
-        result = exec_query(<<-eosql, 'SCHEMA')
+        result = exec_query(<<-eosql, 'SCHEMA', [table.to_s, column.to_s])
           SELECT generator_sequence FROM system.fields WHERE tablename='#{table}' AND field='#{column}'
         eosql
         result.rows.first.first
@@ -733,12 +811,6 @@ module ActiveRecord
 
       def select(sql, name = nil, binds = [])
         exec_query(sql, name, binds.map { |col, val| type_cast(val, col) }).to_a
-      end
-
-      protected
-
-      def select_rows(sql, name = nil)
-        exec_query(sql, name).rows
       end
 
       private
