@@ -281,7 +281,60 @@ module ActiveRecord
       end
 
       def supports_explain?
-        false
+        true
+      end
+
+      def explain(arel, binds = [])
+        sql     = "EXPLAIN #{to_sql(arel, binds.dup)}"
+        start   = Time.now
+        result  = exec_query(sql, 'EXPLAIN', binds)
+        elapsed = Time.now - start
+
+        ExplainPrettyPrinter.new.pp(result, elapsed)
+      end
+      
+      class ExplainPrettyPrinter # :nodoc:
+
+        def pp(result, elapsed)
+          widths    = compute_column_widths(result)
+
+          pp = []
+
+          pp << build_cells(result.columns, widths)
+
+          result.rows.each do |row|
+            pp << build_cells(row, widths)
+          end
+
+          pp << build_footer(result.rows.length, elapsed)
+
+          pp.join("\n") + "\n"
+        end
+
+        private
+
+        def compute_column_widths(result)
+          [].tap do |widths|
+            result.columns.each_with_index do |column, i|
+              cells_in_column = [column] + result.rows.map {|r| r[i].nil? ? 'NULL' : r[i].to_s}
+              widths << cells_in_column.map(&:length).max
+            end
+          end
+        end
+
+        def build_cells(items, widths)
+          cells = []
+          items.each_with_index do |item, i|
+            item = 'NULL' if item.nil?
+            justifier = item.is_a?(Numeric) ? 'rjust' : 'ljust'
+            cells << item.to_s.send(justifier, widths[i])
+          end
+        end
+
+        def build_footer(nrows, elapsed)
+          rows_label = nrows == 1 ? 'row' : 'rows'
+          "#{nrows} #{rows_label} in set (%.2f sec)" % elapsed
+        end
       end
 
       # CONNECTION MANAGEMENT ==================================
@@ -684,9 +737,9 @@ module ActiveRecord
         exec_query(sql, name).rows
       end
       
-      def select_values(sql, name = nil)
-        exec_query(sql, name).values
-      end
+      # def select_values(sql, name = nil)
+        # exec_query(sql, name).values
+      # end
 
       def outside_transaction?
         nil
