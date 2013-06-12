@@ -12,7 +12,7 @@ Gem::Specification.new do |gem|
   gem.license = 'BSD'
 
   gem.rdoc_options = %w(--charset=UTF-8)
-  gem.extra_rdoc_files = %w[README.rdoc]
+  gem.extra_rdoc_files = %w[README.md]
 
   gem.add_dependency('activerecord', '~> 3.2.11')
   gem.add_development_dependency('rake', '~> 10.0.3')
