@@ -37,11 +37,8 @@ require 'arel/visitors/bind_visitor'
 require 'active_support/core_ext/hash/keys'
 
 require 'nuodb'
-
 module ActiveRecord
-
   class Base
-
     def self.nuodb_connection(config) #:nodoc:
       config.symbolize_keys!
       unless config[:database]
@@ -52,7 +49,6 @@ module ActiveRecord
       config.reverse_merge! :timezone => 'UTC'
       ConnectionAdapters::NuoDBAdapter.new nil, logger, nil, config
     end
-
   end
 
   class LostConnection < WrappedDatabaseException
@@ -499,14 +495,39 @@ module ActiveRecord
         raise NotImplementedError, "rename_table is not implemented"
         #execute("RENAME TABLE #{quote_table_name(table_name)} TO #{quote_table_name(new_name)}")
       end
+
+      #Carlos Added Begins
       
       def add_column(table_name, column_name, type, options = {})
         clear_cache!
-        add_column_sql = "ALTER TABLE #{quote_table_name(table_name)} ADD COLUMN #{quote_column_name(column_name)}"
-        add_column_options!(add_column_sql, options)
-        execute(add_column_sql)
+        #Stored procedure not supported
+        #add_column_sql = "CREATE PROCEDURE PR1 BEGIN IF NOT EXISTS((SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE()
+        #        AND COLUMN_NAME=#{quote_column_name(column_name)} AND TABLE_NAME=#{quote_table_name(table_name)})) THEN ALTER TABLE #{quote_table_name(table_name)} ADD COLUMN #{quote_column_name(column_name)} #{type.to_s} END IF"
+        if column_exists?(table_name, column_name) == false
+          add_column_sql = "ALTER TABLE #{quote_table_name(table_name)} ADD COLUMN #{quote_column_name(column_name)} #{type.to_s}"
+          add_column_options!(add_column_sql, options)
+          execute(add_column_sql)
+        end
       end
       
+      def add_index(table_name, column_name, options = {})
+        index_name, index_type, index_columns = add_index_options(table_name, column_name, options)
+        if okay_index(table_name, column_name, options = {}) == true
+          execute "CREATE #{index_type} INDEX #{quote_column_name(index_name)} ON #{quote_table_name(table_name)} (#{index_columns})"
+        end
+      end
+
+      def okay_index(table_name, column_name, options = {})
+        begin
+          execute("CREATE #{index_type} INDEX #{quote_column_name(index_name)} ON #{quote_table_name(table_name)} (#{index_columns})")
+          return true
+        rescue
+          return false
+        end
+      end
+
+      #Carlos Added Ends
+
       def remove_index!(table_name, index_name) #:nodoc:
         raise NotImplementedError, "remove_index! is not implemented"
       end
@@ -515,6 +536,18 @@ module ActiveRecord
         execute("ALTER INDEX #{quote_column_name(old_name)} RENAME TO #{quote_table_name(new_name)}")
       end
       
+      #Carlos Added
+      def column_exists?(table_name, column_name, type = nil, options = {})
+        begin
+          execute("SELECT #{quote_column_name(column_name)} FROM #{quote_table_name(table_name)}")
+          return true
+        rescue
+          return false
+        end
+      end
+
+      #ENDS
+
       def table_exists?(table_name)
         return false unless table_name
 
@@ -546,7 +579,6 @@ module ActiveRecord
 
       # Returns an array of indexes for the given table. Skip primary keys.
       def indexes(table_name, name = nil)
-
         # the following query returns something like this:
         #
         # INDEXNAME              TABLENAME NON_UNIQUE FIELD     LENGTH
@@ -578,7 +610,8 @@ module ActiveRecord
         current_index = nil
         result.map do |row|
           row.symbolize_keys!
-          index_name = row[:index_name]
+          #Carlos Added .downcase!
+          index_name = row[:index_name].downcase!
           if current_index != index_name
             next if !!(/PRIMARY/ =~ index_name)
             current_index = index_name
