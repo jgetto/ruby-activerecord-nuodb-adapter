@@ -22,6 +22,7 @@ before_install:
   - sleep 2
   - sudo chmod 777 active_setup_linux.sh
   - ./active_setup_linux.sh
+  - gem install bigdecimal
   - ARCONN=nuodb ruby -Itest /home/travis/build/nuodb/ruby-activerecord-nuodb-adapter/test/cases/migration_test.rb
 
 before_script:
