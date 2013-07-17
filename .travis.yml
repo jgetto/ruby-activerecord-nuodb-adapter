@@ -22,8 +22,8 @@ before_install:
   - sleep 2
   - sudo chmod 777 active_setup_linux.sh
   - ./active_setup_linux.sh
-  - cd test && ls
-  - cd .. && cd .. && ls
+  - cd test && ls && pwd
+  - cd .. && cd .. && cd .. && ls
   - ARCONN=nuodb ruby -Itest test/test_simple.rb
 
 before_script:
