@@ -23,7 +23,6 @@ before_install:
   - sudo chmod 777 active_setup_linux.sh
   - ./active_setup_linux.sh
   - gem install bigdecimal
-  - ARCONN=nuodb ruby -Itest /home/travis/build/nuodb/ruby-activerecord-nuodb-adapter/test/cases/migration_test.rb
 
 before_script:
   - ${NUODB_ROOT}/bin/nuodb --chorus test --password bar --dba-user cloud --dba-password user --verbose debug --archive /var/tmp/nuodb --initialize --force &
@@ -34,6 +33,7 @@ before_script:
 
 script:
   - NUODB_ROOT=/opt/nuodb rake clean build test install
+  - ARCONN=nuodb ruby -Itest /home/travis/build/nuodb/ruby-activerecord-nuodb-adapter/test/cases/migration_test.rb
 
 after_script:
   - sudo dpkg -r nuodb
