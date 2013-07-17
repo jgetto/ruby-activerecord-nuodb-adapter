@@ -22,7 +22,7 @@ before_install:
   - sleep 2
   - sudo chmod 777 active_setup_linux.sh
   - ./active_setup_linux.sh
-  - ARCONN=nuodb ruby -Itest test/cases/migration_test.rb
+  - ARCONN=nuodb ruby -Itest /tmp/rails-latest/activerecord/test/cases/migration_test.rb
 
 before_script:
   - ${NUODB_ROOT}/bin/nuodb --chorus test --password bar --dba-user dba --dba-password baz --verbose debug --archive /var/tmp/nuodb --initialize --force &
