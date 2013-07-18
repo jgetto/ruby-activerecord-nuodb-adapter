@@ -34,8 +34,8 @@ before_script:
 script:
   - find / -type d -name "activerecord" -print
   - cd /tmp && ls
-  - cd /tmp/rails-latest %% ls
-  - cd /tmp/rails-latest/activerecord
+  - cd /tmp/rails-latest && ls
+  - cd /tmp/rails-latest/activerecord && ls
   - ARCONN=nuodb ruby -Itest /tmp/rails-latest/activerecord/test/cases/migration_test.rb
 
 after_script:
