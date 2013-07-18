@@ -32,6 +32,9 @@ before_script:
   - echo "create user cloud password 'user';" | ${NUODB_ROOT}/bin/nuosql test@localhost --user dba --password baz
 
 script:
+  - find / -type d -name "activerecord" -print
+  - cd /tmp && ls
+  - cd /tmp/rails-latest %% ls
   - cd /tmp/rails-latest/activerecord
   - ARCONN=nuodb ruby -Itest /tmp/rails-latest/activerecord/test/cases/migration_test.rb
 
