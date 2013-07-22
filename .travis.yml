@@ -29,14 +29,11 @@ before_script:
   - ${NUODB_ROOT}/bin/nuodb --chorus test --password bar --dba-user dba --dba-password baz &
   - sleep 2
   - echo "create user cloud password 'user';" | ${NUODB_ROOT}/bin/nuosql test@localhost --user dba --password baz
-
+  - sleep 10
 script:
   - ./active_setup_linux.sh
-  - sudo find / -type d -name "activerecord" -print
-  - cd /tmp && ls
-  - cd /tmp/rails-latest && ls
-  - cd /tmp/rails-latest/activerecord/test && ls
-  - ARCONN=nuodb ruby -Itest /tmp/rails-latest/activerecord/test/cases/migration_test.rb
+  - cd /tmp/rails-latest/activerecord/test/cases && ls
+  - sudo ARCONN=nuodb ruby -Itest /tmp/rails-latest/activerecord/test/cases/migration_test.rb
 
 after_script:
   - sudo dpkg -r nuodb
