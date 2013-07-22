@@ -36,8 +36,7 @@ before_script:
   - echo "create user cloud password 'user';" | ${NUODB_ROOT}/bin/nuosql test@localhost --user dba --password baz
   - sleep 10
 script:
-  - cd /usr/local/lib/ruby/1.9.1/rubygems/ && ls
-  - ARCONN=nuodb ruby -Itest /tmp/rails-latest/activerecord/test/cases/migration_test.rb
+  - ARCONN=nuodb ruby -I. /tmp/rails-latest/activerecord/test/cases/migration_test.rb
 
 after_script:
   - sudo dpkg -r nuodb
