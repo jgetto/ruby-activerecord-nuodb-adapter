@@ -21,7 +21,6 @@ before_install:
   - sudo dpkg -i /var/tmp/nuodb.deb
   - sleep 2
   - sudo chmod 777 active_setup_linux.sh
-  - ./active_setup_linux.sh
   - gem install bigdecimal
 
 before_script:
@@ -32,10 +31,11 @@ before_script:
   - echo "create user cloud password 'user';" | ${NUODB_ROOT}/bin/nuosql test@localhost --user dba --password baz
 
 script:
-  - find / -type d -name "activerecord" -print
+  - ./active_setup_linux.sh
+  - sudo find / -type d -name "activerecord" -print
   - cd /tmp && ls
   - cd /tmp/rails-latest && ls
-  - cd /tmp/rails-latest/activerecord && ls
+  - cd /tmp/rails-latest/activerecord/test && ls
   - ARCONN=nuodb ruby -Itest /tmp/rails-latest/activerecord/test/cases/migration_test.rb
 
 after_script:
