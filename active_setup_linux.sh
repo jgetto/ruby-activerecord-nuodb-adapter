@@ -5,6 +5,7 @@
 sudo apt-get install libtool libxml2 openssl sqlite
 sudo apt-get install rbenv
 sudo apt-get install ruby-build
+sudo apt-get install ruby-rvm
 
 echo "eval \"\$(rbenv init -)\"" >> ~/.bash_profile
 
