@@ -2,6 +2,7 @@
 #Script to set up activerecord tests on Ubuntu
 
 #installing dependencies
+sudo apt-get update
 sudo apt-get install libtool libxml2 openssl sqlite
 sudo apt-get install rbenv
 sudo apt-get install ruby-build
@@ -26,9 +27,9 @@ bundle
 rbenv rehash
 
 cd /tmp/ruby-nuodb-latest
-sudo chmod 777 nuodb.gemspec
-sudo sed -i '/README.rdoc/d' ./nuodb.gemspec #Removes README.rdoc to resolve rake errors
-sudo rake clean build
+chmod 777 nuodb.gemspec
+sed -i '/README.rdoc/d' ./nuodb.gemspec #Removes README.rdoc to resolve rake errors
+rake clean build
 cd pkg
 sudo gem install nuodb-1.0.2.gem
 
