@@ -4,8 +4,7 @@
 #installing dependencies
 sudo apt-get install libtool libxml2 openssl sqlite
 sudo apt-get install rbenv
-#sudo apt-get install ruby-build
-yes | sudo apt-get install ruby-rvm
+sudo apt-get install ruby-build
 
 echo "eval \"\$(rbenv init -)\"" >> ~/.bash_profile
 
@@ -26,11 +25,12 @@ cd ruby-nuodb-latest
 bundle
 rbenv rehash
 
+cd /tmp/ruby-nuodb-latest
 sudo chmod 777 nuodb.gemspec
-sed -i '/README.rdoc/d' ./nuodb.gemspec #Removes README.rdoc to resolve rake errors
-rake clean build
+sudo sed -i '/README.rdoc/d' ./nuodb.gemspec #Removes README.rdoc to resolve rake errors
+sudo rake clean build
 cd pkg
-gem install nuodb-1.0.2.gem
+sudo gem install nuodb-1.0.2.gem
 
 cd /tmp
 
