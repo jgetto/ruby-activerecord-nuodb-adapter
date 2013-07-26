@@ -79,6 +79,12 @@ sed -i 's/%w( mysql mysql2 postgresql/%w( nuodb mysql mysql2 postgresql/g' Rakef
 echo "gem 'activerecord-nuodb-adapter'" >> /home/travis/build/rails/Gemfile
 bundle install
 
+echo $GEM_HOME
+
+export GEM_HOME=/home/travis/.rvm/rubies/ruby-1.9.3-p448/
+
+cd /home/travis/.rvm/rubies/ruby-1.9.3-p448/lib/ruby/site_ruby/1.9.1/rubygems/core_ext/ $$ ls
+
 # Helpful information, make sure that NuoDB is running
 
 # Starting NuoDB
