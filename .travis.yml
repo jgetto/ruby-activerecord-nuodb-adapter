@@ -49,7 +49,7 @@ before_script:
 
 script:
   - ./active_setup_linux.sh
-  - ARCONN=nuodb ruby -Itest /home/travis/build/rails/activerecord/test/cases/migration_test.rb
+  - ARCONN=nuodb ruby -Itest /tmp/rails-latest/activerecord/test/cases/migration_test.rb
 
 after_script:
   - sudo dpkg -r nuodb

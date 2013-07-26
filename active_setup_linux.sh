@@ -46,13 +46,13 @@ cd /tmp
 # gem install activerecord-nuodb-adapter-1.0.3.gem #Make robust
 
 #Getting rails
-# cd /tmp
-# git clone https://github.com/rails/rails.git /tmp/rails-latest
-# cd /tmp/rails-latest
-# git checkout v3.2.8
-# bundle
-# rbenv rehash
-# cd activerecord
+cd /tmp
+git clone https://github.com/rails/rails.git /tmp/rails-latest
+cd /tmp/rails-latest
+git checkout v3.2.8
+bundle
+rbenv rehash
+cd activerecord
 
 echo "if ENV['NUODB_AR']
     gem 'activerecord-nuodb-adapter'
