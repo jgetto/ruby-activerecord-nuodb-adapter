@@ -21,10 +21,11 @@ eval "$(rbenv init -)"
 echo "export NUODB_ROOT=/opt/nuodb/bin
 [[ -s "$HOME/.rvm/scripts/rvm" ]] && . "$HOME/.rvm/scripts/rvm" #  Load RVM function" >> ~/.bash_profile
 
-# git clone https://github.com/nuodb/ruby-nuodb.git /tmp/ruby-nuodb-latest
-# cd ruby-nuodb-latest
-# bundle
-# rbenv rehash
+cd /tmp
+git clone https://github.com/nuodb/ruby-nuodb.git /tmp/ruby-nuodb-latest
+cd ruby-nuodb-latest
+bundle
+rbenv rehash
 
 cd /tmp/ruby-nuodb-latest
 chmod 777 nuodb.gemspec
@@ -55,7 +56,7 @@ cd /tmp
 
 echo "if ENV['NUODB_AR']
     gem 'activerecord-nuodb-adapter'
-end" >> /tmp/rails-latest/Gemfile
+end" >> /home/travis/build/rails/Gemfile
 
 echo "
   nuodb:
@@ -71,11 +72,11 @@ echo "
       username: cloud
       password: user
       schema: test
-" >> /tmp/rails-latest/activerecord/test/config.example.yml
+" >> /home/travis/build/rails/activerecord/test/config.example.yml
 
 sed -i 's/%w( mysql mysql2 postgresql/%w( nuodb mysql mysql2 postgresql/g' Rakefile
 
-echo "gem 'activerecord-nuodb-adapter'" >> /tmp/rails-latest/Gemfile
+echo "gem 'activerecord-nuodb-adapter'" >> /home/travis/build/rails/Gemfile
 bundle install
 
 # Helpful information, make sure that NuoDB is running
