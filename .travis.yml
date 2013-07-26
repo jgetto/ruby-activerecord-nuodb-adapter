@@ -16,9 +16,9 @@ install:
   - gem install io-console
   - gem install atomic
   - gem install bigdecimal
-  - apt-get update
-  - apt-get install libtool libxml2 openssl sqlite
-  - apt-get install rbenv
+  - sudo apt-get update
+  - sudo apt-get install libtool libxml2 openssl sqlite
+  - sudo apt-get install rbenv
   - rbenv install 1.9.3-p392
   - rbenv global 1.9.3-p392
   - rbenv rehash
