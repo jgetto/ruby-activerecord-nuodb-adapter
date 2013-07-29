@@ -56,7 +56,7 @@ cd activerecord
 
 echo "if ENV['NUODB_AR']
     gem 'activerecord-nuodb-adapter'
-end" >> /home/travis/build/rails/Gemfile
+end" >> /tmp/rails-latest/Gemfile
 
 echo "
   nuodb:
@@ -72,11 +72,11 @@ echo "
       username: cloud
       password: user
       schema: test
-" >> /home/travis/build/rails/activerecord/test/config.example.yml
+" >> /tmp/rails-latest/activerecord/test/config.example.yml
 
 sed -i 's/%w( mysql mysql2 postgresql/%w( nuodb mysql mysql2 postgresql/g' Rakefile
 
-echo "gem 'activerecord-nuodb-adapter'" >> /home/travis/build/rails/Gemfile
+echo "gem 'activerecord-nuodb-adapter'" >> /tmp/rails-latest/Gemfile
 bundle install
 
 echo $GEM_HOME
