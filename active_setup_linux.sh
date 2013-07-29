@@ -35,7 +35,6 @@ rake clean build
 cd pkg
 sudo gem install nuodb-1.0.2.gem
 
-
 #Getting the driver
 # git clone https://github.com/nuodb/ruby-activerecord-nuodb-adapter.git ~/tmpy/ruby-activerecord-nuodb-adapter-latest
 # cd ~/tmpy/ruby-activerecord-nuodb-adapter-latest
@@ -80,11 +79,12 @@ bundle install
 
 echo $GEM_HOME
 
-export GEM_HOME=/home/travis/.rvm/rubies/ruby-1.9.3-p448/
+export GEM_HOME=/home/travis/.rvm/rubies/ruby-1.9.3-p448/lib/ruby/site_ruby/1.9.1/rubygems
 
-cd
 echo 'HERE'
-find . -name 'kernel_require.rb'
+cd /home/travis/.rvm/rubies/ruby-1.9.3-p448/lib/ruby/site_ruby/1.9.1/rubygems/core_ext/
+
+sed -i 's/require "cases\/helper"/require_relative "cases\/helper"/' /home/travis/tmpy/rails-latest/activerecord/test/cases/migration_test.rb
 
 # Helpful information, make sure that NuoDB is running
 
