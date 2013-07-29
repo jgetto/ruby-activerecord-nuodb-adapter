@@ -84,7 +84,7 @@ export GEM_HOME=/home/travis/.rvm/rubies/ruby-1.9.3-p448/lib/ruby/site_ruby/1.9.
 echo 'HERE'
 cd /home/travis/.rvm/rubies/ruby-1.9.3-p448/lib/ruby/site_ruby/1.9.1/rubygems/core_ext/
 
-sed -i 's/require "cases\/helper"/require_relative "cases\/helper"/' /home/travis/tmpy/rails-latest/activerecord/test/cases/migration_test.rb
+sed -i 's/require "cases\/helper"/require_relative "helper"/' /home/travis/tmpy/rails-latest/activerecord/test/cases/migration_test.rb
 
 # Helpful information, make sure that NuoDB is running
 
