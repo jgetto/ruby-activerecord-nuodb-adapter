@@ -20,8 +20,8 @@ install:
   - sudo apt-get install libtool libxml2 openssl sqlite
   - sudo apt-get install rbenv
   #- rbenv install 1.9.3-p392
-  - rbenv global 1.9.3-p392
-  - rbenv rehash
+  #- rbenv global 1.9.3-p392
+  #- rbenv rehash
   - gem install nuodb
   - gem install activerecord-nuodb-adapter
   - gem install rails -v "=3.2.8"
