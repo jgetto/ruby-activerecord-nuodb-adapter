@@ -46,9 +46,9 @@ cd /tmp
 # gem install activerecord-nuodb-adapter-1.0.3.gem #Make robust
 
 #Getting rails
-cd /tmp
-git clone https://github.com/rails/rails.git /tmp/rails-latest
-cd /tmp/rails-latest
+mkdir tmpy
+git clone https://github.com/rails/rails.git tmpy/rails-latest
+cd tmpy/rails-latest
 git checkout v3.2.8
 bundle
 rbenv rehash
@@ -56,7 +56,7 @@ cd activerecord
 
 echo "if ENV['NUODB_AR']
     gem 'activerecord-nuodb-adapter'
-end" >> /tmp/rails-latest/Gemfile
+end" >> tmpy/rails-latest/Gemfile
 
 echo "
   nuodb:
@@ -72,11 +72,11 @@ echo "
       username: cloud
       password: user
       schema: test
-" >> /tmp/rails-latest/activerecord/test/config.example.yml
+" >> tmpy/rails-latest/activerecord/test/config.example.yml
 
 sed -i 's/%w( mysql mysql2 postgresql/%w( nuodb mysql mysql2 postgresql/g' Rakefile
 
-echo "gem 'activerecord-nuodb-adapter'" >> /tmp/rails-latest/Gemfile
+echo "gem 'activerecord-nuodb-adapter'" >> tmpy/rails-latest/Gemfile
 bundle install
 
 echo $GEM_HOME
