@@ -21,24 +21,24 @@ eval "$(rbenv init -)"
 echo "export NUODB_ROOT=/opt/nuodb/bin
 [[ -s "$HOME/.rvm/scripts/rvm" ]] && . "$HOME/.rvm/scripts/rvm" #  Load RVM function" >> ~/.bash_profile
 
-cd /tmp
-git clone https://github.com/nuodb/ruby-nuodb.git /tmp/ruby-nuodb-latest
-cd ruby-nuodb-latest
+cd ~/
+mkdir tmpy
+git clone https://github.com/nuodb/ruby-nuodb.git ~/tmpy/ruby-nuodb-latest
+cd ~/tmpy/ruby-nuodb-latest
 bundle
 rbenv rehash
 
-cd /tmp/ruby-nuodb-latest
+cd ~/tmpy/ruby-nuodb-latest
 chmod 777 nuodb.gemspec
 sed -i '/README.rdoc/d' ./nuodb.gemspec #Removes README.rdoc to resolve rake errors
 rake clean build
 cd pkg
 sudo gem install nuodb-1.0.2.gem
 
-cd ~/
 
 #Getting the driver
-# git clone https://github.com/nuodb/ruby-activerecord-nuodb-adapter.git /tmp/ruby-activerecord-nuodb-adapter-latest
-# cd /tmp/ruby-activerecord-nuodb-adapter-latest
+# git clone https://github.com/nuodb/ruby-activerecord-nuodb-adapter.git ~/tmpy/ruby-activerecord-nuodb-adapter-latest
+# cd ~/tmpy/ruby-activerecord-nuodb-adapter-latest
 # bundle
 # rbenv rehash
 # rake clean build
@@ -46,9 +46,8 @@ cd ~/
 # gem install activerecord-nuodb-adapter-1.0.3.gem #Make robust
 
 #Getting rails
-mkdir tmpy
-git clone https://github.com/rails/rails.git tmpy/rails-latest
-cd tmpy/rails-latest
+git clone https://github.com/rails/rails.git ~/tmpy/rails-latest
+cd ~/tmpy/rails-latest
 git checkout v3.2.8
 bundle
 rbenv rehash
@@ -56,7 +55,7 @@ cd activerecord
 
 echo "if ENV['NUODB_AR']
     gem 'activerecord-nuodb-adapter'
-end" >> tmpy/rails-latest/Gemfile
+end" >> ~/tmpy/rails-latest/Gemfile
 
 echo "
   nuodb:
@@ -72,11 +71,11 @@ echo "
       username: cloud
       password: user
       schema: test
-" >> tmpy/rails-latest/activerecord/test/config.example.yml
+" >> ~/tmpy/rails-latest/activerecord/test/config.example.yml
 
 sed -i 's/%w( mysql mysql2 postgresql/%w( nuodb mysql mysql2 postgresql/g' Rakefile
 
-echo "gem 'activerecord-nuodb-adapter'" >> tmpy/rails-latest/Gemfile
+echo "gem 'activerecord-nuodb-adapter'" >> ~/tmpy/rails-latest/Gemfile
 bundle install
 
 echo $GEM_HOME
@@ -84,6 +83,8 @@ echo $GEM_HOME
 export GEM_HOME=/home/travis/.rvm/rubies/ruby-1.9.3-p448/
 
 cd /home/travis/.rvm/rubies/ruby-1.9.3-p448/lib/ruby/site_ruby/1.9.1/rubygems/core_ext/ $$ ls
+
+cd ~/tmpy/rails-latest/activerecord/test/cases && ls
 
 # Helpful information, make sure that NuoDB is running
 
