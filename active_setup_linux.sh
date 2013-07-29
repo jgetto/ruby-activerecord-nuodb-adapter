@@ -34,7 +34,7 @@ rake clean build
 cd pkg
 sudo gem install nuodb-1.0.2.gem
 
-cd /tmp
+cd ~/
 
 #Getting the driver
 # git clone https://github.com/nuodb/ruby-activerecord-nuodb-adapter.git /tmp/ruby-activerecord-nuodb-adapter-latest
