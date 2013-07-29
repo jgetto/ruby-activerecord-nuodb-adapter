@@ -82,6 +82,8 @@ echo $GEM_HOME
 
 export GEM_HOME=/home/travis/.rvm/rubies/ruby-1.9.3-p448/
 
+cd
+echo 'HERE'
 find . -name 'kernel_require.rb'
 
 # Helpful information, make sure that NuoDB is running
