@@ -82,9 +82,7 @@ echo $GEM_HOME
 
 export GEM_HOME=/home/travis/.rvm/rubies/ruby-1.9.3-p448/
 
-cd /home/travis/.rvm/rubies/ruby-1.9.3-p448/lib/ruby/site_ruby/1.9.1/rubygems/core_ext/ $$ ls
-
-cd ~/tmpy/rails-latest/activerecord/test/cases && ls
+find . -name 'kernel_require.rb'
 
 # Helpful information, make sure that NuoDB is running
 
