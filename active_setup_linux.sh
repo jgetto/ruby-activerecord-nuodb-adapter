@@ -31,8 +31,9 @@ rbenv rehash
 cd ~/tmpy/ruby-nuodb-latest
 chmod 777 nuodb.gemspec
 sed -i '/README.rdoc/d' ./nuodb.gemspec #Removes README.rdoc to resolve rake errors
-rake clean build
-cd pkg
+gem build nuodb.gemspec
+#rake clean build
+#cd pkg
 sudo gem install nuodb-1.0.2.gem
 
 #Getting the driver
@@ -88,6 +89,8 @@ export RUBYLIB
 
 echo 'HERE'
 cd /home/travis/.rvm/rubies/ruby-1.9.3-p448/lib/ruby/site_ruby/1.9.1/rubygems/core_ext/ && ls
+
+cd /home/travis/build/nuodb/load_paths && ls
 
 #sed -i 's/require "cases\/helper"/require_relative "helper"/' /home/travis/tmpy/rails-latest/activerecord/test/cases/migration_test.rb
 
