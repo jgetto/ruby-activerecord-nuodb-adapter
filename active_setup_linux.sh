@@ -90,7 +90,7 @@ export RUBYLIB
 echo 'HERE'
 cd /home/travis/.rvm/rubies/ruby-1.9.3-p448/lib/ruby/site_ruby/1.9.1/rubygems/core_ext/ && ls
 
-cd /home/travis/build/nuodb/load_paths && ls
+cd /home/travis/build/nuodb/ && ls
 
 #sed -i 's/require "cases\/helper"/require_relative "helper"/' /home/travis/tmpy/rails-latest/activerecord/test/cases/migration_test.rb
 
