@@ -78,24 +78,15 @@ sed -i 's/%w( mysql mysql2 postgresql/%w( nuodb mysql mysql2 postgresql/g' Rakef
 echo "gem 'activerecord-nuodb-adapter'" >> ~/tmpy/rails-latest/Gemfile
 bundle install
 
-echo $GEM_HOME
+#echo $GEM_HOME
 
-export GEM_HOME=/home/travis/.rvm/rubies/ruby-1.9.3-p448/lib/ruby/site_ruby/1.9.1/rubygems
+#export GEM_HOME=/home/travis/.rvm/rubies/ruby-1.9.3-p448/lib/ruby/site_ruby/1.9.1/rubygems
 
-echo $RUBYLIB
+#echo $RUBYLIB
 
-RUBYLIB="~/tmpy/rails-latest/activerecord/test/cases:$RUBYLIB"
-export RUBYLIB
+#RUBYLIB="~/tmpy/rails-latest/activerecord/test/cases:$RUBYLIB"
+#export RUBYLIB
 
-sed -i 's/require "models\/developer"/require ".\/models\/developer"/' /home/travis/tmpy/rails-latest/activecord/test/cases/migration_test.rb
-
-sed -i 's/require "models\/topic"/require ".\/models\/topic"/' /home/travis/tmpy/rails-latest/activecord/test/cases/migration_test.rb
-
-sed -i 's/require "models\/person"/require ".\/models\/person"/' /home/travis/tmpy/rails-latest/activecord/test/cases/migration_test.rb
-
-sed -i 's/require "bigdecimal\/util"/require ".\/bigdecimal\/util"/' /home/travis/tmpy/rails-latest/activerecord/test/cases/migration_test.rb
-
-sed -i 's/require "cases\/helper"/require ".\/cases\/helper"/' /home/travis/tmpy/rails-latest/activerecord/test/cases/migration_test.rb
 
 # Helpful information, make sure that NuoDB is running
 
