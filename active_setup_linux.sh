@@ -87,9 +87,15 @@ echo $RUBYLIB
 RUBYLIB="~/tmpy/rails-latest/activerecord/test/cases:$RUBYLIB"
 export RUBYLIB
 
-echo $LOAD_PATH
+sed -i 's/require "models\/developer"/require "./models\/developer"/' /home/travis/tmpy/rails-latest/activecord/test/cases/migration_test.rb
 
-#sed -i 's/require "cases\/helper"/require_relative "helper"/' /home/travis/tmpy/rails-latest/activerecord/test/cases/migration_test.rb
+sed -i 's/require "models\/topic"/require "./models\/topic"/' /home/travis/tmpy/rails-latest/activecord/test/cases/migration_test.rb
+
+sed -i 's/require "models\/person"/require "./models\/person"/' /home/travis/tmpy/rails-latest/activecord/test/cases/migration_test.rb
+
+sed -i 's/require "bigdecimal\/util"/require "./bigdecimal\/util"/' /home/travis/tmpy/rails-latest/activerecord/test/cases/migration_test.rb
+
+sed -i 's/require "cases\/helper"/require "./cases\/helper"/' /home/travis/tmpy/rails-latest/activerecord/test/cases/migration_test.rb
 
 # Helpful information, make sure that NuoDB is running
 
