@@ -80,8 +80,6 @@ bundle install
 
 export GEM_PATH=/home/travis/.rvm/gems/ruby-1.9.3-p448
 
-cd $GEM_PATH && ls && find . -name 'mocha.rb'
-
 #RUBYLIB="~/tmpy/rails-latest/activerecord/test/cases:$RUBYLIB"
 #export RUBYLIB
 
