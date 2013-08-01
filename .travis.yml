@@ -16,6 +16,7 @@ install:
   - gem install io-console
   - gem install atomic
   - gem install bigdecimal
+  - gem install mocha
   - sudo apt-get update
   - sudo apt-get install libtool libxml2 openssl sqlite
   - sudo apt-get install rbenv
