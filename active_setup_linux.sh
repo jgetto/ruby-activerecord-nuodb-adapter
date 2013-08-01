@@ -78,6 +78,10 @@ sed -i 's/%w( mysql mysql2 postgresql/%w( nuodb mysql mysql2 postgresql/g' Rakef
 echo "gem 'activerecord-nuodb-adapter'" >> ~/tmpy/rails-latest/Gemfile
 bundle install
 
+gem environment
+
+cd /home/creyes/.gem/ruby/1.9.1 && ls
+
 #echo $GEM_HOME
 
 #export GEM_HOME=/home/travis/.rvm/rubies/ruby-1.9.3-p448/lib/ruby/site_ruby/1.9.1/rubygems
