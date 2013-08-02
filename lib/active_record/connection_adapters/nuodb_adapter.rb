@@ -176,7 +176,7 @@ module ActiveRecord
           when /string/i then
             :text
           when /binarystring/i then
-            :string
+            :binary
           else
             super
         end
