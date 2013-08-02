@@ -175,6 +175,8 @@ module ActiveRecord
             :date
           when /string/i then
             :text
+          when /binarystring/i then
+            :string
           else
             super
         end
@@ -682,6 +684,7 @@ module ActiveRecord
             # nuodb specific types...
             :char => {:name => 'char'},
             :numeric => {:name => 'numeric(20)'},
+            :binarystring => {:name => 'varchar', :limit => 255}
         }
       end
 
