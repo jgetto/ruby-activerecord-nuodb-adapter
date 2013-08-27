@@ -12,11 +12,10 @@ Gem::Specification.new do |gem|
   gem.license = 'BSD'
 
   gem.rdoc_options = %w(--charset=UTF-8)
-  gem.extra_rdoc_files = %w[README.md]
 
-  gem.add_dependency('activerecord', '~> 3.2.11')
-  gem.add_development_dependency('rake', '~> 10.0.3')
-  gem.add_development_dependency('rdoc', '~> 3.10')
+  gem.add_dependency('activerecord', '~> 4.0.0')
+  gem.add_development_dependency('rake', '~> 10.1.0')
+  gem.add_development_dependency('rdoc', '~> 4.0.0')
   gem.add_dependency('nuodb', '~> 1.0.2')
 
   gem.files = `git ls-files`.split($\)
