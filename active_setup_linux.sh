@@ -7,7 +7,6 @@ git clone https://github.com/rails/rails.git ~/rails-latest
 cd ~/rails-latest
 git checkout v3.2.13
 
-
 echo "=== Apply NuoDB Specific Settings ==="
 
 echo "
@@ -24,13 +23,13 @@ echo "
       username: cloud
       password: user
       schema: test
-" >> ~/rails-latest/activerecord/test/config.yml
+" >> ~/rails-latest/activerecord/test/config.example.yml
+
+cp ~/rails-latest/activerecord/test/config.example.yml ~/rails-latest/activerecord/test/config.yml
 
 sed -i 's/%w( mysql mysql2 postgresql/%w( nuodb mysql mysql2 postgresql/g' Rakefile
 
 echo "gem 'activerecord-nuodb-adapter'" >> ~/rails-latest/Gemfile
-
-bundle install
 
 echo "=== Finished Setting up AR tests ==="
 
