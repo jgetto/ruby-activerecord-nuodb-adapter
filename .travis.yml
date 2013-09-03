@@ -35,6 +35,7 @@ script:
   - . ./active_setup_linux.sh
   - cd ~/rails-latest
   - bundle install
+  - gem list -d
   - ARCONN=nuodb ruby -I"~/rails-latest/activerecord/test/" activerecord/test/cases/base_test.rb
 
 after_script:
