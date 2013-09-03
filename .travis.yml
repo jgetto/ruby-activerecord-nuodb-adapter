@@ -32,7 +32,8 @@ before_script:
 
 script:
   - . ./active_setup_linux.sh
-  - ARCONN=nuodb ruby ~/rails-latest/activerecord/test/cases/base_test.rb
+  - cd ~/rails-latest/activerecord
+  - ARCONN=nuodb ruby test/cases/base_test.rb
 
 after_script:
   - sudo dpkg -r nuodb
