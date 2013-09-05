@@ -10,6 +10,14 @@ ActiveRecord::Schema.define do
     # For Firebird, set the sequence values 10000 when create_table is called;
     # this prevents primary key collisions between "normally" created records
     # and fixture-based (YAML) records.
+  when "NuoDB"
+    def create_table(*args, &block)
+      #TODO: Fix this once DB-493 is resolved 
+      ActiveRecord::Base.connection.drop_table args.first rescue nil
+      ActiveRecord::Base.connection.execute "DROP SEQUENCE IF EXISTS `#{args.first.upcase}$IDENTITY_SEQUENCE`"
+      ActiveRecord::Base.connection.execute "CREATE SEQUENCE `#{args.first.upcase}$IDENTITY_SEQUENCE` START WITH 10000"
+      ActiveRecord::Base.connection.create_table(*args, &block)
+    end
   when "Firebird"
     def create_table(*args, &block)
       ActiveRecord::Base.connection.create_table(*args, &block)
