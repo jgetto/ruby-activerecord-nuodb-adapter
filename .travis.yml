@@ -4,11 +4,11 @@ rvm:
   - 1.9.3
 
 env:
-  - NUODB_ROOT=/opt/nuodb NUODB_VERSION=1.2
-  - NUODB_ROOT=/opt/nuodb NUODB_VERSION=1.1.1
-  - NUODB_ROOT=/opt/nuodb NUODB_VERSION=1.1
-  - NUODB_ROOT=/opt/nuodb NUODB_VERSION=1.0.2
-  - NUODB_ROOT=/opt/nuodb NUODB_VERSION=1.0.1
+  - NUODB_HOME=/opt/nuodb NUODB_VERSION=1.2
+  - NUODB_HOME=/opt/nuodb NUODB_VERSION=1.1.1
+  - NUODB_HOME=/opt/nuodb NUODB_VERSION=1.1
+  - NUODB_HOME=/opt/nuodb NUODB_VERSION=1.0.2
+  - NUODB_HOME=/opt/nuodb NUODB_VERSION=1.0.1
 
 notifications:
   recipients:
@@ -24,19 +24,12 @@ before_install:
   - sudo chmod 777 active_setup_linux.sh
 
 before_script:
-  - ${NUODB_ROOT}/bin/nuodb --chorus test --password bar --dba-user dba --dba-password baz --verbose debug --archive /var/tmp/nuodb --initialize --force &
-  - sleep 2
-  - ${NUODB_ROOT}/bin/nuodb --chorus test --password bar --dba-user dba --dba-password baz &
-  - sleep 2
-  - echo "create user cloud password 'user';" | ${NUODB_ROOT}/bin/nuosql test@localhost --user dba --password baz
-  - sleep 10
+  - ${NUODB_HOME}/bin/nuodbmgr --broker localhost --user domain --password bird --command "start process sm database test host localhost archive /var/tmp/nuodb initialize true waitForRunning true"
+  - ${NUODB_HOME}/bin/nuodbmgr --broker localhost --user domain --password bird --command "start process te database test host localhost options '--dba-user dba --dba-password baz' waitForRunning true"
+  - echo "create user cloud password 'user';" | ${NUODB_HOME}/bin/nuosql test@localhost --user dba --password baz
 
 script:
-  - . ./active_setup_linux.sh
-  - cd ~/rails-latest
-  - bundle install
-  - gem list -d
-  - ARCONN=nuodb ruby -I"~/rails-latest/activerecord/test/" activerecord/test/cases/base_test.rb
+  - ruby -I"lib:test" test/cases/base_test.rb 
 
 after_script:
   - sudo dpkg -r nuodb
