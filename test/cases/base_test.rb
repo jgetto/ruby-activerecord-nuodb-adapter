@@ -95,11 +95,7 @@ class BasicsTest < ActiveRecord::TestCase
     conn      = ActiveRecord::Base.connection
     classname = conn.class.name[/[^:]*$/]
     badchar   = {
-      'SQLite3Adapter'    => '"',
-      'MysqlAdapter'      => '`',
-      'Mysql2Adapter'     => '`',
-      'PostgreSQLAdapter' => '"',
-      'OracleAdapter'     => '"',
+      'NuoDBAdapter'     => '`',
     }.fetch(classname) {
       raise "need a bad char for #{classname}"
     }
