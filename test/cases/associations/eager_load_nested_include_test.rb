@@ -6,6 +6,7 @@ require 'models/comment'
 require 'models/category'
 require 'models/categorization'
 require 'models/tagging'
+require 'active_support/core_ext/array/random_access'
 
 module Remembered
   extend ActiveSupport::Concern
@@ -92,7 +93,8 @@ class EagerLoadPolyAssocsTest < ActiveRecord::TestCase
   end
 
   def test_include_query
-    res = ShapeExpression.all.merge!(:includes => [ :shape, { :paint => :non_poly } ]).to_a
+    res = 0
+    res = ShapeExpression.find :all, :include => [ :shape, { :paint => :non_poly } ]
     assert_equal NUM_SHAPE_EXPRESSIONS, res.size
     assert_queries(0) do
       res.each do |se|
@@ -122,7 +124,7 @@ class EagerLoadNestedIncludeWithMissingDataTest < ActiveRecord::TestCase
     assert_nothing_raised do
       # @davey_mcdave doesn't have any author_favorites
       includes = {:posts => :comments, :categorizations => :category, :author_favorites => :favorite_author }
-      Author.all.merge!(:includes => includes, :where => {:authors => {:name => @davey_mcdave.name}}, :order => 'categories.name').to_a
+      Author.all :include => includes, :conditions => {:authors => {:name => @davey_mcdave.name}}, :order => 'categories.name'
     end
   end
 end

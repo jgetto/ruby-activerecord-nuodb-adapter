@@ -12,12 +12,12 @@ Gem::Specification.new do |gem|
   gem.license = 'BSD'
 
   gem.rdoc_options = %w(--charset=UTF-8)
-  gem.extra_rdoc_files = %w[README.md]
 
   gem.add_dependency('activerecord', '~> 3.2.11')
   gem.add_development_dependency('rake', '~> 10.0.3')
   gem.add_development_dependency('rdoc', '~> 3.10')
   gem.add_dependency('nuodb', '~> 1.1')
+
 
   gem.files = `git ls-files`.split($\)
   gem.test_files = gem.files.grep(%r{^(test|spec|features)/})

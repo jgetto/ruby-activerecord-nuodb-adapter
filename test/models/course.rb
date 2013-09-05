@@ -1,6 +1,3 @@
-require_dependency 'models/arunit2_model'
-
-class Course < ARUnit2Model
-  belongs_to :college
+class Course < ActiveRecord::Base
   has_many :entrants
 end

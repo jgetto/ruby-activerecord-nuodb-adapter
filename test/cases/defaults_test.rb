@@ -1,4 +1,5 @@
 require "cases/helper"
+require 'active_support/core_ext/object/inclusion'
 require 'models/default'
 require 'models/entrant'
 
@@ -39,32 +40,7 @@ class DefaultTest < ActiveRecord::TestCase
   end
 end
 
-class DefaultStringsTest < ActiveRecord::TestCase
-  class DefaultString < ActiveRecord::Base; end
-
-  setup do
-    @connection = ActiveRecord::Base.connection
-    @connection.create_table :default_strings do |t|
-      t.string :string_col, default: "Smith"
-      t.string :string_col_with_quotes, default: "O'Connor"
-    end
-    DefaultString.reset_column_information
-  end
-
-  def test_default_strings
-    assert_equal "Smith", DefaultString.new.string_col
-  end
-
-  def test_default_strings_containing_single_quotes
-    assert_equal "O'Connor", DefaultString.new.string_col_with_quotes
-  end
-
-  teardown do
-    @connection.drop_table :default_strings
-  end
-end
-
-if current_adapter?(:MysqlAdapter, :Mysql2Adapter)
+if current_adapter?(:MysqlAdapter) or current_adapter?(:Mysql2Adapter)
   class DefaultsTestWithoutTransactionalFixtures < ActiveRecord::TestCase
     # ActiveRecord::Base#create! (and #save and other related methods) will
     # open a new transaction. When in transactional fixtures mode, this will
@@ -76,60 +52,11 @@ if current_adapter?(:MysqlAdapter, :Mysql2Adapter)
     # We don't want that to happen, so we disable transactional fixtures here.
     self.use_transactional_fixtures = false
 
-    def using_strict(strict)
-      connection = ActiveRecord::Base.remove_connection
-      ActiveRecord::Base.establish_connection connection.merge(strict: strict)
-      yield
-    ensure
-      ActiveRecord::Base.remove_connection
-      ActiveRecord::Base.establish_connection connection
-    end
-
-    # MySQL cannot have defaults on text/blob columns. It reports the
-    # default value as null.
-    #
-    # Despite this, in non-strict mode, MySQL will use an empty string
-    # as the default value of the field, if no other value is
-    # specified.
-    #
-    # Therefore, in non-strict mode, we want column.default to report
-    # an empty string as its default, to be consistent with that.
-    #
-    # In strict mode, column.default should be nil.
-    def test_mysql_text_not_null_defaults_non_strict
-      using_strict(false) do
-        with_text_blob_not_null_table do |klass|
-          assert_equal '', klass.columns_hash['non_null_blob'].default
-          assert_equal '', klass.columns_hash['non_null_text'].default
-
-          assert_nil klass.columns_hash['null_blob'].default
-          assert_nil klass.columns_hash['null_text'].default
-
-          instance = klass.create!
-
-          assert_equal '', instance.non_null_text
-          assert_equal '', instance.non_null_blob
-
-          assert_nil instance.null_text
-          assert_nil instance.null_blob
-        end
-      end
-    end
-
-    def test_mysql_text_not_null_defaults_strict
-      using_strict(true) do
-        with_text_blob_not_null_table do |klass|
-          assert_nil klass.columns_hash['non_null_blob'].default
-          assert_nil klass.columns_hash['non_null_text'].default
-          assert_nil klass.columns_hash['null_blob'].default
-          assert_nil klass.columns_hash['null_text'].default
-
-          assert_raises(ActiveRecord::StatementInvalid) { klass.create }
-        end
-      end
-    end
-
-    def with_text_blob_not_null_table
+    # MySQL 5 and higher is quirky with not null text/blob columns.
+    # With MySQL Text/blob columns cannot have defaults. If the column is not
+    # null MySQL will report that the column has a null default
+    # but it behaves as though the column had a default of ''
+    def test_mysql_text_not_null_defaults
       klass = Class.new(ActiveRecord::Base)
       klass.table_name = 'test_mysql_text_not_null_defaults'
       klass.connection.create_table klass.table_name do |t|
@@ -138,8 +65,19 @@ if current_adapter?(:MysqlAdapter, :Mysql2Adapter)
         t.column :null_text, :text, :null => true
         t.column :null_blob, :blob, :null => true
       end
+      assert_equal '', klass.columns_hash['non_null_blob'].default
+      assert_equal '', klass.columns_hash['non_null_text'].default
 
-      yield klass
+      assert_nil klass.columns_hash['null_blob'].default
+      assert_nil klass.columns_hash['null_text'].default
+
+      assert_nothing_raised do
+        instance = klass.create!
+        assert_equal '', instance.non_null_text
+        assert_equal '', instance.non_null_blob
+        assert_nil instance.null_text
+        assert_nil instance.null_blob
+      end
     ensure
       klass.connection.drop_table(klass.table_name) rescue nil
     end
@@ -157,7 +95,7 @@ if current_adapter?(:MysqlAdapter, :Mysql2Adapter)
       assert_equal 0, klass.columns_hash['zero'].default
       assert !klass.columns_hash['zero'].null
       # 0 in MySQL 4, nil in 5.
-      assert [0, nil].include?(klass.columns_hash['omit'].default)
+      assert klass.columns_hash['omit'].default.in?([0, nil])
       assert !klass.columns_hash['omit'].null
 
       assert_raise(ActiveRecord::StatementInvalid) { klass.create! }

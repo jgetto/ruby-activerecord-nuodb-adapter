@@ -6,7 +6,7 @@ module ActiveRecord
       def repair_validations(*model_classes)
         teardown do
           model_classes.each do |k|
-            k.clear_validators!
+            k.reset_callbacks(:validate)
           end
         end
       end
@@ -16,7 +16,7 @@ module ActiveRecord
       yield
     ensure
       model_classes.each do |k|
-        k.clear_validators!
+        k.reset_callbacks(:validate)
       end
     end
   end

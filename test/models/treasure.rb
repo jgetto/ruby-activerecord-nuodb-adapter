@@ -6,6 +6,3 @@ class Treasure < ActiveRecord::Base
 
   accepts_nested_attributes_for :looter
 end
-
-class HiddenTreasure < Treasure
-end

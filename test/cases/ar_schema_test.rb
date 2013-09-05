@@ -7,47 +7,32 @@ if ActiveRecord::Base.connection.supports_migrations?
 
     def setup
       @connection = ActiveRecord::Base.connection
-      ActiveRecord::SchemaMigration.drop_table
     end
 
     def teardown
       @connection.drop_table :fruits rescue nil
-      @connection.drop_table :nep_fruits rescue nil
-      @connection.drop_table :nep_schema_migrations rescue nil
-      ActiveRecord::SchemaMigration.delete_all rescue nil
+      @connection.drop_table :"_pre_fruits_suf_" rescue nil
+      @connection.drop_table :"_pre_schema_migrations_suf_" rescue nil
     end
 
     def test_schema_define
-      ActiveRecord::Schema.define(:version => 7) do
-        create_table :fruits do |t|
-          t.column :color, :string
-          t.column :fruit_size, :string  # NOTE: "size" is reserved in Oracle
-          t.column :texture, :string
-          t.column :flavor, :string
-        end
-      end
+      perform_schema_define!
 
       assert_nothing_raised { @connection.select_all "SELECT * FROM fruits" }
       assert_nothing_raised { @connection.select_all "SELECT * FROM schema_migrations" }
       assert_equal 7, ActiveRecord::Migrator::current_version
     end
 
-    def test_schema_define_w_table_name_prefix
-      table_name = ActiveRecord::SchemaMigration.table_name
-      ActiveRecord::Base.table_name_prefix  = "nep_"
-      ActiveRecord::SchemaMigration.table_name = "nep_#{table_name}"
-      ActiveRecord::Schema.define(:version => 7) do
-        create_table :fruits do |t|
-          t.column :color, :string
-          t.column :fruit_size, :string  # NOTE: "size" is reserved in Oracle
-          t.column :texture, :string
-          t.column :flavor, :string
-        end
-      end
+    def test_schema_define_with_table_prefix_and_suffix
+      ActiveRecord::Base.table_name_prefix = '_pre_'
+      ActiveRecord::Base.table_name_suffix = '_suf_'
+
+      perform_schema_define!
+
       assert_equal 7, ActiveRecord::Migrator::current_version
     ensure
-      ActiveRecord::Base.table_name_prefix  = ""
-      ActiveRecord::SchemaMigration.table_name = table_name
+      ActiveRecord::Base.table_name_prefix = ''
+      ActiveRecord::Base.table_name_suffix = ''
     end
 
     def test_schema_raises_an_error_for_invalid_column_type
@@ -59,12 +44,19 @@ if ActiveRecord::Base.connection.supports_migrations?
         end
       end
     end
-
-    def test_schema_subclass
-      Class.new(ActiveRecord::Schema).define(:version => 9) do
-        create_table :fruits
-      end
-      assert_nothing_raised { @connection.select_all "SELECT * FROM fruits" }
-    end
   end
+
+  private
+
+    def perform_schema_define!
+      ActiveRecord::Schema.define(:version => 7) do
+        create_table :fruits do |t|
+          t.column :color, :string
+          t.column :fruit_size, :string  # NOTE: "size" is reserved in Oracle
+          t.column :texture, :string
+          t.column :flavor, :string
+        end
+      end
+    end
+
 end

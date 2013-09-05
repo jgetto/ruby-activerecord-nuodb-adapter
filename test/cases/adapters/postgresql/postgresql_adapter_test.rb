@@ -10,15 +10,6 @@ module ActiveRecord
         @connection.exec_query('create table ex(id serial primary key, number integer, data character varying(255))')
       end
 
-      def test_valid_column
-        column = @connection.columns('ex').find { |col| col.name == 'id' }
-        assert @connection.valid_type?(column.type)
-      end
-
-      def test_invalid_column
-        assert_not @connection.valid_type?(:foobar)
-      end
-
       def test_primary_key
         assert_equal 'id', @connection.primary_key('ex')
       end
@@ -60,33 +51,6 @@ module ActiveRecord
         id = @connection.insert_sql("insert into ex(number) values(5150)")
         expect = @connection.query('select max(id) from ex').first.first
         assert_equal expect, id
-      end
-
-      def test_insert_sql_with_returning_disabled
-        connection = connection_without_insert_returning
-        id = connection.insert_sql("insert into postgresql_partitioned_table_parent (number) VALUES (1)")
-        expect = connection.query('select max(id) from postgresql_partitioned_table_parent').first.first
-        assert_equal expect, id
-      end
-
-      def test_exec_insert_with_returning_disabled
-        connection = connection_without_insert_returning
-        result = connection.exec_insert("insert into postgresql_partitioned_table_parent (number) VALUES (1)", nil, [], 'id', 'postgresql_partitioned_table_parent_id_seq')
-        expect = connection.query('select max(id) from postgresql_partitioned_table_parent').first.first
-        assert_equal expect, result.rows.first.first
-      end
-
-      def test_exec_insert_with_returning_disabled_and_no_sequence_name_given
-        connection = connection_without_insert_returning
-        result = connection.exec_insert("insert into postgresql_partitioned_table_parent (number) VALUES (1)", nil, [], 'id')
-        expect = connection.query('select max(id) from postgresql_partitioned_table_parent').first.first
-        assert_equal expect, result.rows.first.first
-      end
-
-      def test_sql_for_insert_with_returning_disabled
-        connection = connection_without_insert_returning
-        result = connection.sql_for_insert('sql', nil, nil, nil, 'binds')
-        assert_equal ['sql', 'binds'], result
       end
 
       def test_serial_sequence
@@ -219,50 +183,9 @@ module ActiveRecord
         assert_equal Arel.sql('$2'), bind
       end
 
-      def test_partial_index
-        @connection.add_index 'ex', %w{ id number }, :name => 'partial', :where => "number > 100"
-        index = @connection.indexes('ex').find { |idx| idx.name == 'partial' }
-        assert_equal "(number > 100)", index.where
-      end
-
-      def test_columns_for_distinct_zero_orders
-        assert_equal "posts.id",
-          @connection.columns_for_distinct("posts.id", [])
-      end
-
-      def test_columns_for_distinct_one_order
-        assert_equal "posts.id, posts.created_at AS alias_0",
-          @connection.columns_for_distinct("posts.id", ["posts.created_at desc"])
-      end
-
-      def test_columns_for_distinct_few_orders
-        assert_equal "posts.id, posts.created_at AS alias_0, posts.position AS alias_1",
-          @connection.columns_for_distinct("posts.id", ["posts.created_at desc", "posts.position asc"])
-      end
-
-      def test_columns_for_distinct_blank_not_nil_orders
-        assert_equal "posts.id, posts.created_at AS alias_0",
-          @connection.columns_for_distinct("posts.id", ["posts.created_at desc", "", "   "])
-      end
-
-      def test_columns_for_distinct_with_arel_order
-        order = Object.new
-        def order.to_sql
-          "posts.created_at desc"
-        end
-        assert_equal "posts.id, posts.created_at AS alias_0",
-          @connection.columns_for_distinct("posts.id", [order])
-      end
-
-      def test_columns_for_distinct_with_nulls
-        assert_equal "posts.title, posts.updater_id AS alias_0", @connection.columns_for_distinct("posts.title", ["posts.updater_id desc nulls first"])
-        assert_equal "posts.title, posts.updater_id AS alias_0", @connection.columns_for_distinct("posts.title", ["posts.updater_id desc nulls last"])
-      end
-
-      def test_raise_error_when_cannot_translate_exception
-        assert_raise TypeError do
-          @connection.send(:log, nil) { @connection.execute(nil) }
-        end
+      def test_distinct_with_nulls
+        assert_equal "DISTINCT posts.title, posts.updater_id AS alias_0", @connection.distinct("posts.title", ["posts.updater_id desc nulls first"])
+        assert_equal "DISTINCT posts.title, posts.updater_id AS alias_0", @connection.distinct("posts.title", ["posts.updater_id desc nulls last"])
       end
 
       private
@@ -278,10 +201,6 @@ module ActiveRecord
                VALUES (#{bind_subs.join(', ')})"
 
         ctx.exec_insert(sql, 'SQL', binds)
-      end
-
-      def connection_without_insert_returning
-        ActiveRecord::Base.postgresql_connection(ActiveRecord::Base.configurations['arunit'].merge(:insert_returning => false))
       end
     end
   end

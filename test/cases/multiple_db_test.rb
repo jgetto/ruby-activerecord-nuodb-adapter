@@ -1,14 +1,15 @@
 require "cases/helper"
 require 'models/entrant'
 require 'models/bird'
-require 'models/course'
+
+# So we can test whether Course.connection survives a reload.
+require_dependency 'models/course'
 
 class MultipleDbTest < ActiveRecord::TestCase
   self.use_transactional_fixtures = false
 
   def setup
     @courses  = create_fixtures("courses") { Course.retrieve_connection }
-    @colleges = create_fixtures("colleges") { College.retrieve_connection }
     @entrants = create_fixtures("entrants")
   end
 
@@ -91,18 +92,5 @@ class MultipleDbTest < ActiveRecord::TestCase
   def test_connection
     assert_equal Entrant.arel_engine.connection, Bird.arel_engine.connection
     assert_not_equal Entrant.arel_engine.connection, Course.arel_engine.connection
-  end
-
-  unless in_memory_db?
-    def test_associations_should_work_when_model_has_no_connection
-      begin
-        ActiveRecord::Base.remove_connection
-        assert_nothing_raised ActiveRecord::ConnectionNotEstablished do
-          College.first.courses.first
-        end
-      ensure
-        ActiveRecord::Base.establish_connection 'arunit'
-      end
-    end
   end
 end
