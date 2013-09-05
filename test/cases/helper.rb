@@ -1,4 +1,4 @@
-require File.expand_path('../../../../load_paths', __FILE__)
+require File.expand_path('../../load_paths', __FILE__)
 
 require 'config'
 
@@ -10,6 +10,9 @@ require 'active_record'
 require 'active_support/dependencies'
 
 require 'support/config'
+
+#Trick the autoloader. This seems dumb.
+ActiveRecord::ConnectionAdapters::AbstractAdapter
 require 'support/connection'
 
 # TODO: Move all these random hacks into the ARTest namespace and into the support/ dir

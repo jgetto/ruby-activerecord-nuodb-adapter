@@ -33,6 +33,82 @@ require 'rake/testtask'
 require 'rdoc/task'
 require 'date'
 
+require File.expand_path(File.dirname(__FILE__)) + "/test/config"
+require File.expand_path(File.dirname(__FILE__)) + "/test/support/config"
+
+def run_without_aborting(*tasks)
+  errors = []
+
+  tasks.each do |task|
+    begin
+      Rake::Task[task].invoke
+    rescue Exception
+      errors << task
+    end
+  end
+
+  abort "Errors running #{errors.join(', ')}" if errors.any?
+end
+
+desc 'Run nuodb tests by default'
+task :default => :test
+
+desc 'Run nuodb tests'
+task :test do
+  tasks = defined?(JRUBY_VERSION) ?
+    %w(test_jdbcnuodb) :
+    %w(test_nuodb)
+  run_without_aborting(*tasks)
+end
+
+namespace :test do
+  task :isolated do
+    tasks = defined?(JRUBY_VERSION) ?
+      %w(isolated_test_jdbcmysql isolated_test_jdbcsqlite3 isolated_test_jdbcpostgresql) :
+      %w(isolated_test_mysql isolated_test_mysql2 isolated_test_sqlite3 isolated_test_postgresql)
+    run_without_aborting(*tasks)
+  end
+end
+
+%w( nuodb ).each do |adapter|
+  Rake::TestTask.new("test_#{adapter}") { |t|
+    adapter_short = adapter == 'db2' ? adapter : adapter[/^[a-z0-9]+/]
+    t.libs << 'test'
+    t.test_files = (Dir.glob( "test/cases/**/*_test.rb" ).reject {
+      |x| x =~ /\/adapters\//
+    } + Dir.glob("test/cases/adapters/#{adapter_short}/**/*_test.rb")).sort
+
+    t.verbose = true
+    t.warning = true
+  }
+
+  task "isolated_test_#{adapter}" do
+    adapter_short = adapter == 'db2' ? adapter : adapter[/^[a-z0-9]+/]
+    puts [adapter, adapter_short].inspect
+    ruby = File.join(*RbConfig::CONFIG.values_at('bindir', 'RUBY_INSTALL_NAME'))
+    (Dir["test/cases/**/*_test.rb"].reject {
+      |x| x =~ /\/adapters\//
+    } + Dir["test/cases/adapters/#{adapter_short}/**/*_test.rb"]).all? do |file|
+      sh(ruby, "-Itest", file)
+    end or raise "Failures"
+  end
+
+  namespace adapter do
+    task :test => "test_#{adapter}"
+    task :isolated_test => "isolated_test_#{adapter}"
+
+    # Set the connection environment for the adapter
+    task(:env) { ENV['ARCONN'] = adapter }
+  end
+
+  # Make sure the adapter test evaluates the env setting task
+  task "test_#{adapter}" => "#{adapter}:env"
+  task "isolated_test_#{adapter}" => "#{adapter}:env"
+end
+
+
+
+
 #############################################################################
 #
 # Helper functions
@@ -102,13 +178,6 @@ Rake::RDocTask.new do |rdoc|
   rdoc.rdoc_files.include('README*')
   rdoc.rdoc_files.include('lib/**/*.rb')
 end
-
-Rake::TestTask.new do |t|
-  t.libs << 'test'
-  t.test_files = FileList['test/test*.rb']
-end
-
-task :default => :test
 
 #############################################################################
 #
