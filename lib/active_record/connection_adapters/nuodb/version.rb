@@ -29,7 +29,7 @@
 module ActiveRecord
   module ConnectionAdapters
     module NuoDB
-      VERSION = '1.1'
+      VERSION = '2.0'
     end
   end
 end
