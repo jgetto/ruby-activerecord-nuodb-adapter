@@ -4,6 +4,8 @@ rvm:
   - 1.9.3
 
 env:
+  - NUODB_HOME=/opt/nuodb NUODB_VERSION=2.0.2
+  - NUODB_HOME=/opt/nuodb NUODB_VERSION=2.0.1
   - NUODB_HOME=/opt/nuodb NUODB_VERSION=2.0
   - NUODB_HOME=/opt/nuodb NUODB_VERSION=1.2
 
