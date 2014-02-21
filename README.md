@@ -1,4 +1,8 @@
-# Ruby ActiveRecord NuoDB Adapter [<img src="https://secure.travis-ci.org/nuodb/ruby-activerecord-nuodb-adapter.png?branch=master" alt="Continuous Integration Status" />](http://travis-ci.org/nuodb/ruby-activerecord-nuodb-adapter) [<img src="https://gemnasium.com/nuodb/ruby-activerecord-nuodb-adapter.png?travis" alt="Dependency Status" />](https://gemnasium.com/nuodb/ruby-activerecord-nuodb-adapter) [<img src="https://codeclimate.com/github/nuodb/ruby-activerecord-nuodb-adapter.png" />](https://codeclimate.com/github/nuodb/ruby-activerecord-nuodb-adapter)
+# Ruby ActiveRecord NuoDB Adapter
+
+[<img src="https://secure.travis-ci.org/nuodb/ruby-activerecord-nuodb-adapter.png?branch=master" alt="Continuous Integration Status" />](http://travis-ci.org/nuodb/ruby-activerecord-nuodb-adapter)
+[<img src="https://gemnasium.com/nuodb/ruby-activerecord-nuodb-adapter.png?travis" alt="Dependency Status" />](https://gemnasium.com/nuodb/ruby-activerecord-nuodb-adapter)
+[<img src="https://codeclimate.com/github/nuodb/ruby-activerecord-nuodb-adapter.png" />](https://codeclimate.com/github/nuodb/ruby-activerecord-nuodb-adapter)
  
 The Ruby ActiveRecord NuoDB Adapter enables the ActiveRecord ORM to work with [NuoDB](http://nuodb.com/). Together with the [Ruby NuoDB driver](https://github.com/nuodb/ruby-nuodb), this gem allows for NuoDB backed Rails applications.
 
