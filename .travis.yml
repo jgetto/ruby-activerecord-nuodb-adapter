@@ -5,10 +5,6 @@ rvm:
 
 env:
   - NUODB_HOME=/opt/nuodb NUODB_VERSION=2.0.3
-  - NUODB_HOME=/opt/nuodb NUODB_VERSION=2.0.2
-  - NUODB_HOME=/opt/nuodb NUODB_VERSION=2.0.1
-  - NUODB_HOME=/opt/nuodb NUODB_VERSION=2.0
-  - NUODB_HOME=/opt/nuodb NUODB_VERSION=1.2
 
 notifications:
   recipients:
@@ -16,6 +12,7 @@ notifications:
     - rbuck@nuodb.com
     - lbayas@nuodb.com
     - jgetto@nuodb.com
+    - tgates@nuodb.com
 
 before_install:
   - wget http://download.nuohub.org/nuodb-${NUODB_VERSION}.linux.x64.deb --output-document=/var/tmp/nuodb.deb
