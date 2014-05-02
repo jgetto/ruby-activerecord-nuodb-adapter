@@ -16,7 +16,31 @@ class PooledConnectionsTest < ActiveRecord::TestCase
     @per_test_teardown.each {|td| td.call }
   end
 
+  def checkout_connections
+    ActiveRecord::Base.establish_connection(@connection.merge({:pool => 2, :checkout_timeout => 0.3}))
+    @connections = []
+    @timed_out = 0
+
+    4.times do
+      Thread.new do
+        begin
+          @connections << ActiveRecord::Base.connection_pool.checkout
+        rescue ActiveRecord::ConnectionTimeoutError
+          @timed_out += 1
+        end
+      end.join
+    end
+  end
+
   # Will deadlock due to lack of Monitor timeouts in 1.9
+  if RUBY_VERSION < '1.9'
+    def test_pooled_connection_checkout
+      checkout_connections
+      assert_equal 2, @connections.length
+      assert_equal 2, @timed_out
+    end
+  end
+
   def checkout_checkin_connections(pool_size, threads)
     ActiveRecord::Base.establish_connection(@connection.merge({:pool => pool_size, :checkout_timeout => 0.5}))
     @connection_count = 0

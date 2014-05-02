@@ -11,19 +11,16 @@ class SchemaTest < ActiveRecord::TestCase
   INDEX_B_NAME = 'b_index_things_on_different_columns_in_each_schema'
   INDEX_C_NAME = 'c_index_full_text_search'
   INDEX_D_NAME = 'd_index_things_on_description_desc'
-  INDEX_E_NAME = 'e_index_things_on_name_vector'
   INDEX_A_COLUMN = 'name'
   INDEX_B_COLUMN_S1 = 'email'
   INDEX_B_COLUMN_S2 = 'moment'
   INDEX_C_COLUMN = %q{(to_tsvector('english', coalesce(things.name, '')))}
   INDEX_D_COLUMN = 'description'
-  INDEX_E_COLUMN = 'name_vector'
   COLUMNS = [
     'id integer',
     'name character varying(50)',
     'email character varying(50)',
     'description character varying(100)',
-    'name_vector tsvector',
     'moment timestamp without time zone default now()'
   ]
   PK_TABLE_NAME = 'table_with_pk'
@@ -64,8 +61,6 @@ class SchemaTest < ActiveRecord::TestCase
     @connection.execute "CREATE INDEX #{INDEX_C_NAME} ON #{SCHEMA2_NAME}.#{TABLE_NAME}  USING gin (#{INDEX_C_COLUMN});"
     @connection.execute "CREATE INDEX #{INDEX_D_NAME} ON #{SCHEMA_NAME}.#{TABLE_NAME}  USING btree (#{INDEX_D_COLUMN} DESC);"
     @connection.execute "CREATE INDEX #{INDEX_D_NAME} ON #{SCHEMA2_NAME}.#{TABLE_NAME}  USING btree (#{INDEX_D_COLUMN} DESC);"
-    @connection.execute "CREATE INDEX #{INDEX_E_NAME} ON #{SCHEMA_NAME}.#{TABLE_NAME}  USING gin (#{INDEX_E_COLUMN});"
-    @connection.execute "CREATE INDEX #{INDEX_E_NAME} ON #{SCHEMA2_NAME}.#{TABLE_NAME}  USING gin (#{INDEX_E_COLUMN});"
     @connection.execute "CREATE TABLE #{SCHEMA_NAME}.#{PK_TABLE_NAME} (id serial primary key)"
     @connection.execute "CREATE SEQUENCE #{SCHEMA_NAME}.#{UNMATCHED_SEQUENCE_NAME}"
     @connection.execute "CREATE TABLE #{SCHEMA_NAME}.#{UNMATCHED_PK_TABLE_NAME} (id integer NOT NULL DEFAULT nextval('#{SCHEMA_NAME}.#{UNMATCHED_SEQUENCE_NAME}'::regclass), CONSTRAINT unmatched_pkey PRIMARY KEY (id))"
@@ -74,45 +69,6 @@ class SchemaTest < ActiveRecord::TestCase
   def teardown
     @connection.execute "DROP SCHEMA #{SCHEMA2_NAME} CASCADE"
     @connection.execute "DROP SCHEMA #{SCHEMA_NAME} CASCADE"
-  end
-
-  def test_schema_names
-    assert_equal ["public", "schema_1", "test_schema", "test_schema2"], @connection.schema_names
-  end
-
-  def test_create_schema
-    begin
-      @connection.create_schema "test_schema3"
-      assert @connection.schema_names.include? "test_schema3"
-    ensure
-      @connection.drop_schema "test_schema3"
-    end
-  end
-
-  def test_raise_create_schema_with_existing_schema
-    begin
-      @connection.create_schema "test_schema3"
-      assert_raises(ActiveRecord::StatementInvalid) do
-        @connection.create_schema "test_schema3"
-      end
-    ensure
-      @connection.drop_schema "test_schema3"
-    end
-  end
-
-  def test_drop_schema
-    begin
-      @connection.create_schema "test_schema3"
-    ensure
-      @connection.drop_schema "test_schema3"
-    end
-    assert !@connection.schema_names.include?("test_schema3")
-  end
-
-  def test_raise_drop_schema_with_nonexisting_schema
-    assert_raises(ActiveRecord::StatementInvalid) do
-      @connection.drop_schema "test_schema3"
-    end
   end
 
   def test_schema_change_with_prepared_stmt
@@ -227,13 +183,13 @@ class SchemaTest < ActiveRecord::TestCase
   end
 
   def test_raise_on_unquoted_schema_name
-    assert_raises(ActiveRecord::StatementInvalid) do
+    assert_raise(ActiveRecord::StatementInvalid) do
       with_schema_search_path '$user,public'
     end
   end
 
   def test_without_schema_search_path
-    assert_raises(ActiveRecord::StatementInvalid) { columns(TABLE_NAME) }
+    assert_raise(ActiveRecord::StatementInvalid) { columns(TABLE_NAME) }
   end
 
   def test_ignore_nil_schema_search_path
@@ -241,15 +197,15 @@ class SchemaTest < ActiveRecord::TestCase
   end
 
   def test_dump_indexes_for_schema_one
-    do_dump_index_tests_for_schema(SCHEMA_NAME, INDEX_A_COLUMN, INDEX_B_COLUMN_S1, INDEX_D_COLUMN, INDEX_E_COLUMN)
+    do_dump_index_tests_for_schema(SCHEMA_NAME, INDEX_A_COLUMN, INDEX_B_COLUMN_S1, INDEX_D_COLUMN)
   end
 
   def test_dump_indexes_for_schema_two
-    do_dump_index_tests_for_schema(SCHEMA2_NAME, INDEX_A_COLUMN, INDEX_B_COLUMN_S2, INDEX_D_COLUMN, INDEX_E_COLUMN)
+    do_dump_index_tests_for_schema(SCHEMA2_NAME, INDEX_A_COLUMN, INDEX_B_COLUMN_S2, INDEX_D_COLUMN)
   end
 
   def test_dump_indexes_for_schema_multiple_schemas_in_search_path
-    do_dump_index_tests_for_schema("public, #{SCHEMA_NAME}", INDEX_A_COLUMN, INDEX_B_COLUMN_S1, INDEX_D_COLUMN, INDEX_E_COLUMN)
+    do_dump_index_tests_for_schema("public, #{SCHEMA_NAME}", INDEX_A_COLUMN, INDEX_B_COLUMN_S1, INDEX_D_COLUMN)
   end
 
   def test_with_uppercase_index_name
@@ -349,20 +305,15 @@ class SchemaTest < ActiveRecord::TestCase
       @connection.schema_search_path = "'$user', public"
     end
 
-    def do_dump_index_tests_for_schema(this_schema_name, first_index_column_name, second_index_column_name, third_index_column_name, fourth_index_column_name)
+    def do_dump_index_tests_for_schema(this_schema_name, first_index_column_name, second_index_column_name, third_index_column_name)
       with_schema_search_path(this_schema_name) do
         indexes = @connection.indexes(TABLE_NAME).sort_by {|i| i.name}
-        assert_equal 4,indexes.size
+        assert_equal 3,indexes.size
 
         do_dump_index_assertions_for_one_index(indexes[0], INDEX_A_NAME, first_index_column_name)
         do_dump_index_assertions_for_one_index(indexes[1], INDEX_B_NAME, second_index_column_name)
         do_dump_index_assertions_for_one_index(indexes[2], INDEX_D_NAME, third_index_column_name)
-        do_dump_index_assertions_for_one_index(indexes[3], INDEX_E_NAME, fourth_index_column_name)
 
-        indexes.select{|i| i.name != INDEX_E_NAME}.each do |index|
-           assert_equal :btree, index.using
-        end
-        assert_equal :gin, indexes.select{|i| i.name == INDEX_E_NAME}[0].using
         assert_equal :desc, indexes.select{|i| i.name == INDEX_D_NAME}[0].orders[INDEX_D_COLUMN]
       end
     end

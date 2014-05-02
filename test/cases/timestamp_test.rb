@@ -10,8 +10,8 @@ class TimestampTest < ActiveRecord::TestCase
   fixtures :developers, :owners, :pets, :toys, :cars, :tasks
 
   def setup
-    @developer = Developer.first
-    @developer.update_columns(updated_at: Time.now.prev_month)
+    @developer = Developer.order(:id).first
+    @developer.update_attribute(:updated_at, Time.now.prev_month)
     @previously_updated_at = @developer.updated_at
   end
 
@@ -113,25 +113,10 @@ class TimestampTest < ActiveRecord::TestCase
     assert_not_equal previously_owner_updated_at, pet.owner.updated_at
   end
 
-  def test_saving_a_new_record_belonging_to_invalid_parent_with_touch_should_not_raise_exception
-    klass = Class.new(Owner) do
-      def self.name; 'Owner'; end
-      validate { errors.add(:base, :invalid) }
-    end
-
-    pet = Pet.new(owner: klass.new)
-    pet.save!
-
-    assert pet.owner.new_record?
-  end
-
   def test_saving_a_record_with_a_belongs_to_that_specifies_touching_a_specific_attribute_the_parent_should_update_that_attribute
-    klass = Class.new(ActiveRecord::Base) do
-      def self.name; 'Pet'; end
-      belongs_to :owner, :touch => :happy_at
-    end
+    Pet.belongs_to :owner, :touch => :happy_at
 
-    pet   = klass.first
+    pet   = Pet.first
     owner = pet.owner
     previously_owner_happy_at = owner.happy_at
 
@@ -139,141 +124,42 @@ class TimestampTest < ActiveRecord::TestCase
     pet.save
 
     assert_not_equal previously_owner_happy_at, pet.owner.happy_at
+  ensure
+    Pet.belongs_to :owner, :touch => true
   end
 
   def test_touching_a_record_with_a_belongs_to_that_uses_a_counter_cache_should_update_the_parent
-    klass = Class.new(ActiveRecord::Base) do
-      def self.name; 'Pet'; end
-      belongs_to :owner, :counter_cache => :use_count, :touch => true
-    end
+    Pet.belongs_to :owner, :counter_cache => :use_count, :touch => true
 
-    pet = klass.first
+    pet = Pet.first
     owner = pet.owner
-    owner.update_columns(happy_at: 3.days.ago)
+    owner.update_attribute(:happy_at, 3.days.ago)
     previously_owner_updated_at = owner.updated_at
 
     pet.name = "I'm a parrot"
     pet.save
 
     assert_not_equal previously_owner_updated_at, pet.owner.updated_at
+  ensure
+    Pet.belongs_to :owner, :touch => true
   end
 
   def test_touching_a_record_touches_parent_record_and_grandparent_record
-    klass = Class.new(ActiveRecord::Base) do
-      def self.name; 'Toy'; end
-      belongs_to :pet, :touch => true
-    end
+    Toy.belongs_to :pet, :touch => true
+    Pet.belongs_to :owner, :touch => true
 
-    toy = klass.first
+    toy = Toy.first
     pet = toy.pet
     owner = pet.owner
     time = 3.days.ago
 
-    owner.update_columns(updated_at: time)
+    owner.update_column(:updated_at, time)
     toy.touch
     owner.reload
 
     assert_not_equal time, owner.updated_at
-  end
-
-  def test_touching_a_record_touches_polymorphic_record
-    klass = Class.new(ActiveRecord::Base) do
-      def self.name; 'Toy'; end
-    end
-
-    wheel_klass = Class.new(ActiveRecord::Base) do
-      def self.name; 'Wheel'; end
-      belongs_to :wheelable, :polymorphic => true, :touch => true
-    end
-
-    toy = klass.first
-    time = 3.days.ago
-    toy.update_columns(updated_at: time)
-
-    wheel = wheel_klass.new
-    wheel.wheelable = toy
-    wheel.save
-    wheel.touch
-
-    assert_not_equal time, toy.updated_at
-  end
-
-  def test_changing_parent_of_a_record_touches_both_new_and_old_parent_record
-    klass = Class.new(ActiveRecord::Base) do
-      def self.name; 'Toy'; end
-      belongs_to :pet, touch: true
-    end
-
-    toy1 = klass.find(1)
-    old_pet = toy1.pet
-
-    toy2 = klass.find(2)
-    new_pet = toy2.pet
-    time = 3.days.ago.at_beginning_of_hour
-
-    old_pet.update_columns(updated_at: time)
-    new_pet.update_columns(updated_at: time)
-
-    toy1.pet = new_pet
-    toy1.save!
-
-    old_pet.reload
-    new_pet.reload
-
-    assert_not_equal time, new_pet.updated_at
-    assert_not_equal time, old_pet.updated_at
-  end
-
-  def test_changing_parent_of_a_record_touches_both_new_and_old_polymorphic_parent_record
-    klass = Class.new(ActiveRecord::Base) do
-      def self.name; 'Toy'; end
-    end
-
-    wheel_klass = Class.new(ActiveRecord::Base) do
-      def self.name; 'Wheel'; end
-      belongs_to :wheelable, :polymorphic => true, :touch => true
-    end
-
-    toy1 = klass.find(1)
-    toy2 = klass.find(2)
-
-    wheel = wheel_klass.new
-    wheel.wheelable = toy1
-    wheel.save!
-
-    time = 3.days.ago.at_beginning_of_hour
-
-    toy1.update_columns(updated_at: time)
-    toy2.update_columns(updated_at: time)
-
-    wheel.wheelable = toy2
-    wheel.save!
-
-    toy1.reload
-    toy2.reload
-
-    assert_not_equal time, toy1.updated_at
-    assert_not_equal time, toy2.updated_at
-  end
-
-  def test_clearing_association_touches_the_old_record
-    klass = Class.new(ActiveRecord::Base) do
-      def self.name; 'Toy'; end
-      belongs_to :pet, touch: true
-    end
-
-    toy = klass.find(1)
-    pet = toy.pet
-    time = 3.days.ago.at_beginning_of_hour
-
-    pet.update_columns(updated_at: time)
-
-    toy.pet = nil
-    toy.save!
-
-    pet.reload
-
-    assert_not_equal time, pet.updated_at
+  ensure
+    Toy.belongs_to :pet
   end
 
   def test_timestamp_attributes_for_create

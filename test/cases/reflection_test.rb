@@ -3,6 +3,7 @@ require 'models/topic'
 require 'models/customer'
 require 'models/company'
 require 'models/company_in_module'
+require 'models/subscriber'
 require 'models/ship'
 require 'models/pirate'
 require 'models/price_estimate'
@@ -35,18 +36,18 @@ class ReflectionTest < ActiveRecord::TestCase
 
   def test_read_attribute_names
     assert_equal(
-      %w( id title author_name author_email_address bonus_time written_on last_read content important group approved replies_count unique_replies_count parent_id parent_title type created_at updated_at ).sort,
+      %w( id title author_name author_email_address bonus_time written_on last_read content important group approved replies_count parent_id parent_title type created_at updated_at ).sort,
       @first.attribute_names.sort
     )
   end
 
   def test_columns
-    assert_equal 18, Topic.columns.length
+    assert_equal 17, Topic.columns.length
   end
 
   def test_columns_are_returned_in_the_order_they_were_declared
     column_names = Topic.columns.map { |column| column.name }
-    assert_equal %w(id title author_name author_email_address written_on bonus_time last_read content important approved replies_count unique_replies_count parent_id parent_title type group created_at updated_at), column_names
+    assert_equal %w(id title author_name author_email_address written_on bonus_time last_read content important approved replies_count parent_id parent_title type group created_at updated_at), column_names
   end
 
   def test_content_columns
@@ -62,7 +63,7 @@ class ReflectionTest < ActiveRecord::TestCase
   end
 
   def test_column_null_not_null
-    subscriber = Subscriber.first
+    subscriber = Subscriber.find(:first)
     assert subscriber.column_for_attribute("name").null
     assert !subscriber.column_for_attribute("nick").null
   end
@@ -76,7 +77,7 @@ class ReflectionTest < ActiveRecord::TestCase
   end
 
   def test_reflection_klass_for_nested_class_name
-    reflection = MacroReflection.new(:company, nil, nil, { :class_name => 'MyApplication::Business::Company' }, ActiveRecord::Base)
+    reflection = MacroReflection.new(:company, nil, { :class_name => 'MyApplication::Business::Company' }, ActiveRecord::Base)
     assert_nothing_raised do
       assert_equal MyApplication::Business::Company, reflection.klass
     end
@@ -84,15 +85,15 @@ class ReflectionTest < ActiveRecord::TestCase
 
   def test_aggregation_reflection
     reflection_for_address = AggregateReflection.new(
-      :composed_of, :address, nil, { :mapping => [ %w(address_street street), %w(address_city city), %w(address_country country) ] }, Customer
+      :composed_of, :address, { :mapping => [ %w(address_street street), %w(address_city city), %w(address_country country) ] }, Customer
     )
 
     reflection_for_balance = AggregateReflection.new(
-      :composed_of, :balance, nil, { :class_name => "Money", :mapping => %w(balance amount) }, Customer
+      :composed_of, :balance, { :class_name => "Money", :mapping => %w(balance amount) }, Customer
     )
 
     reflection_for_gps_location = AggregateReflection.new(
-      :composed_of, :gps_location, nil, { }, Customer
+      :composed_of, :gps_location, { }, Customer
     )
 
     assert Customer.reflect_on_all_aggregations.include?(reflection_for_gps_location)
@@ -116,7 +117,7 @@ class ReflectionTest < ActiveRecord::TestCase
   end
 
   def test_has_many_reflection
-    reflection_for_clients = AssociationReflection.new(:has_many, :clients, nil, { :order => "id", :dependent => :destroy }, Firm)
+    reflection_for_clients = AssociationReflection.new(:has_many, :clients, { :order => "id", :dependent => :destroy }, Firm)
 
     assert_equal reflection_for_clients, Firm.reflect_on_association(:clients)
 
@@ -128,7 +129,7 @@ class ReflectionTest < ActiveRecord::TestCase
   end
 
   def test_has_one_reflection
-    reflection_for_account = AssociationReflection.new(:has_one, :account, nil, { :foreign_key => "firm_id", :dependent => :destroy }, Firm)
+    reflection_for_account = AssociationReflection.new(:has_one, :account, { :foreign_key => "firm_id", :dependent => :destroy }, Firm)
     assert_equal reflection_for_account, Firm.reflect_on_association(:account)
 
     assert_equal Account, Firm.reflect_on_association(:account).klass
@@ -186,6 +187,14 @@ class ReflectionTest < ActiveRecord::TestCase
     ActiveRecord::Base.store_full_sti_class = true
   end
 
+  def test_reflection_of_all_associations
+    # FIXME these assertions bust a lot
+    assert_equal 38, Firm.reflect_on_all_associations.size
+    assert_equal 28, Firm.reflect_on_all_associations(:has_many).size
+    assert_equal 10, Firm.reflect_on_all_associations(:has_one).size
+    assert_equal 0, Firm.reflect_on_all_associations(:belongs_to).size
+  end
+
   def test_reflection_should_not_raise_error_when_compared_to_other_object
     assert_nothing_raised { Firm.reflections[:clients] == Object.new }
   end
@@ -205,25 +214,21 @@ class ReflectionTest < ActiveRecord::TestCase
     assert_equal expected, actual
   end
 
-  def test_scope_chain
+  def test_conditions
     expected = [
-      [Tagging.reflect_on_association(:tag).scope, Post.reflect_on_association(:first_blue_tags).scope],
-      [Post.reflect_on_association(:first_taggings).scope],
-      [Author.reflect_on_association(:misc_posts).scope]
+      [{ :tags => { :name => 'Blue' } }],
+      [{ :taggings => { :comment => 'first' } }],
+      [{ :posts => { :title => ['misc post by bob', 'misc post by mary'] } }]
     ]
-    actual = Author.reflect_on_association(:misc_post_first_blue_tags).scope_chain
+    actual = Author.reflect_on_association(:misc_post_first_blue_tags).conditions
     assert_equal expected, actual
 
     expected = [
-      [
-        Tagging.reflect_on_association(:blue_tag).scope,
-        Post.reflect_on_association(:first_blue_tags_2).scope,
-        Author.reflect_on_association(:misc_post_first_blue_tags_2).scope
-      ],
+      [{ :tags => { :name => 'Blue' } }, { :taggings => { :comment => 'first' } }, { :posts => { :title => ['misc post by bob', 'misc post by mary'] } }],
       [],
       []
     ]
-    actual = Author.reflect_on_association(:misc_post_first_blue_tags_2).scope_chain
+    actual = Author.reflect_on_association(:misc_post_first_blue_tags_2).conditions
     assert_equal expected, actual
   end
 
@@ -249,10 +254,10 @@ class ReflectionTest < ActiveRecord::TestCase
   end
 
   def test_association_primary_key_raises_when_missing_primary_key
-    reflection = ActiveRecord::Reflection::AssociationReflection.new(:fuu, :edge, nil, {}, Author)
+    reflection = ActiveRecord::Reflection::AssociationReflection.new(:fuu, :edge, {}, Author)
     assert_raises(ActiveRecord::UnknownPrimaryKey) { reflection.association_primary_key }
 
-    through = ActiveRecord::Reflection::ThroughReflection.new(:fuu, :edge, nil, {}, Author)
+    through = ActiveRecord::Reflection::ThroughReflection.new(:fuu, :edge, {}, Author)
     through.stubs(:source_reflection).returns(stub_everything(:options => {}, :class_name => 'Edge'))
     assert_raises(ActiveRecord::UnknownPrimaryKey) { through.association_primary_key }
   end
@@ -263,7 +268,7 @@ class ReflectionTest < ActiveRecord::TestCase
   end
 
   def test_active_record_primary_key_raises_when_missing_primary_key
-    reflection = ActiveRecord::Reflection::AssociationReflection.new(:fuu, :author, nil, {}, Edge)
+    reflection = ActiveRecord::Reflection::AssociationReflection.new(:fuu, :author, {}, Edge)
     assert_raises(ActiveRecord::UnknownPrimaryKey) { reflection.active_record_primary_key }
   end
 
@@ -281,32 +286,32 @@ class ReflectionTest < ActiveRecord::TestCase
   end
 
   def test_default_association_validation
-    assert AssociationReflection.new(:has_many, :clients, nil, {}, Firm).validate?
+    assert AssociationReflection.new(:has_many, :clients, {}, Firm).validate?
 
-    assert !AssociationReflection.new(:has_one, :client, nil, {}, Firm).validate?
-    assert !AssociationReflection.new(:belongs_to, :client, nil, {}, Firm).validate?
-    assert !AssociationReflection.new(:has_and_belongs_to_many, :clients, nil, {}, Firm).validate?
+    assert !AssociationReflection.new(:has_one, :client, {}, Firm).validate?
+    assert !AssociationReflection.new(:belongs_to, :client, {}, Firm).validate?
+    assert !AssociationReflection.new(:has_and_belongs_to_many, :clients, {}, Firm).validate?
   end
 
   def test_always_validate_association_if_explicit
-    assert AssociationReflection.new(:has_one, :client, nil, { :validate => true }, Firm).validate?
-    assert AssociationReflection.new(:belongs_to, :client, nil, { :validate => true }, Firm).validate?
-    assert AssociationReflection.new(:has_many, :clients, nil, { :validate => true }, Firm).validate?
-    assert AssociationReflection.new(:has_and_belongs_to_many, :clients, nil, { :validate => true }, Firm).validate?
+    assert AssociationReflection.new(:has_one, :client, { :validate => true }, Firm).validate?
+    assert AssociationReflection.new(:belongs_to, :client, { :validate => true }, Firm).validate?
+    assert AssociationReflection.new(:has_many, :clients, { :validate => true }, Firm).validate?
+    assert AssociationReflection.new(:has_and_belongs_to_many, :clients, { :validate => true }, Firm).validate?
   end
 
   def test_validate_association_if_autosave
-    assert AssociationReflection.new(:has_one, :client, nil, { :autosave => true }, Firm).validate?
-    assert AssociationReflection.new(:belongs_to, :client, nil, { :autosave => true }, Firm).validate?
-    assert AssociationReflection.new(:has_many, :clients, nil, { :autosave => true }, Firm).validate?
-    assert AssociationReflection.new(:has_and_belongs_to_many, :clients, nil, { :autosave => true }, Firm).validate?
+    assert AssociationReflection.new(:has_one, :client, { :autosave => true }, Firm).validate?
+    assert AssociationReflection.new(:belongs_to, :client, { :autosave => true }, Firm).validate?
+    assert AssociationReflection.new(:has_many, :clients, { :autosave => true }, Firm).validate?
+    assert AssociationReflection.new(:has_and_belongs_to_many, :clients, { :autosave => true }, Firm).validate?
   end
 
   def test_never_validate_association_if_explicit
-    assert !AssociationReflection.new(:has_one, :client, nil, { :autosave => true, :validate => false }, Firm).validate?
-    assert !AssociationReflection.new(:belongs_to, :client, nil, { :autosave => true, :validate => false }, Firm).validate?
-    assert !AssociationReflection.new(:has_many, :clients, nil, { :autosave => true, :validate => false }, Firm).validate?
-    assert !AssociationReflection.new(:has_and_belongs_to_many, :clients, nil, { :autosave => true, :validate => false }, Firm).validate?
+    assert !AssociationReflection.new(:has_one, :client, { :autosave => true, :validate => false }, Firm).validate?
+    assert !AssociationReflection.new(:belongs_to, :client, { :autosave => true, :validate => false }, Firm).validate?
+    assert !AssociationReflection.new(:has_many, :clients, { :autosave => true, :validate => false }, Firm).validate?
+    assert !AssociationReflection.new(:has_and_belongs_to_many, :clients, { :autosave => true, :validate => false }, Firm).validate?
   end
 
   def test_foreign_key
@@ -314,66 +319,14 @@ class ReflectionTest < ActiveRecord::TestCase
     assert_equal "category_id", Post.reflect_on_association(:categorizations).foreign_key.to_s
   end
 
-  def test_through_reflection_scope_chain_does_not_modify_other_reflections
-    orig_conds = Post.reflect_on_association(:first_blue_tags_2).scope_chain.inspect
-    Author.reflect_on_association(:misc_post_first_blue_tags_2).scope_chain
-    assert_equal orig_conds, Post.reflect_on_association(:first_blue_tags_2).scope_chain.inspect
+  def test_through_reflection_conditions_do_not_modify_other_reflections
+    orig_conds = Post.reflect_on_association(:first_blue_tags_2).conditions.inspect
+    Author.reflect_on_association(:misc_post_first_blue_tags_2).conditions
+    assert_equal orig_conds, Post.reflect_on_association(:first_blue_tags_2).conditions.inspect
   end
 
   def test_symbol_for_class_name
     assert_equal Client, Firm.reflect_on_association(:unsorted_clients_with_symbol).klass
-  end
-
-  def test_join_table
-    category = Struct.new(:table_name, :pluralize_table_names).new('categories', true)
-    product = Struct.new(:table_name, :pluralize_table_names).new('products', true)
-
-    reflection = AssociationReflection.new(:has_and_belongs_to_many, :categories, nil, {}, product)
-    reflection.stubs(:klass).returns(category)
-    assert_equal 'categories_products', reflection.join_table
-
-    reflection = AssociationReflection.new(:has_and_belongs_to_many, :products, nil, {}, category)
-    reflection.stubs(:klass).returns(product)
-    assert_equal 'categories_products', reflection.join_table
-  end
-
-  def test_join_table_with_common_prefix
-    category = Struct.new(:table_name, :pluralize_table_names).new('catalog_categories', true)
-    product = Struct.new(:table_name, :pluralize_table_names).new('catalog_products', true)
-
-    reflection = AssociationReflection.new(:has_and_belongs_to_many, :categories, nil, {}, product)
-    reflection.stubs(:klass).returns(category)
-    assert_equal 'catalog_categories_products', reflection.join_table
-
-    reflection = AssociationReflection.new(:has_and_belongs_to_many, :products, nil, {}, category)
-    reflection.stubs(:klass).returns(product)
-    assert_equal 'catalog_categories_products', reflection.join_table
-  end
-
-  def test_join_table_with_different_prefix
-    category = Struct.new(:table_name, :pluralize_table_names).new('catalog_categories', true)
-    page = Struct.new(:table_name, :pluralize_table_names).new('content_pages', true)
-
-    reflection = AssociationReflection.new(:has_and_belongs_to_many, :categories, nil, {}, page)
-    reflection.stubs(:klass).returns(category)
-    assert_equal 'catalog_categories_content_pages', reflection.join_table
-
-    reflection = AssociationReflection.new(:has_and_belongs_to_many, :pages, nil, {}, category)
-    reflection.stubs(:klass).returns(page)
-    assert_equal 'catalog_categories_content_pages', reflection.join_table
-  end
-
-  def test_join_table_can_be_overridden
-    category = Struct.new(:table_name, :pluralize_table_names).new('categories', true)
-    product = Struct.new(:table_name, :pluralize_table_names).new('products', true)
-
-    reflection = AssociationReflection.new(:has_and_belongs_to_many, :categories, nil, { :join_table => 'product_categories' }, product)
-    reflection.stubs(:klass).returns(category)
-    assert_equal 'product_categories', reflection.join_table
-
-    reflection = AssociationReflection.new(:has_and_belongs_to_many, :products, nil, { :join_table => 'product_categories' }, category)
-    reflection.stubs(:klass).returns(product)
-    assert_equal 'product_categories', reflection.join_table
   end
 
   private

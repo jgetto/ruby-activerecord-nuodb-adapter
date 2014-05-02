@@ -34,11 +34,11 @@ class MysqlReservedWordTest < ActiveRecord::TestCase
       'select'=>'id int auto_increment primary key',
       'values'=>'id int auto_increment primary key, group_id int',
       'distinct'=>'id int auto_increment primary key',
-      'distinct_select'=>'distinct_id int, select_id int'
+      'distincts_selects'=>'distinct_id int, select_id int'
   end
 
   def teardown
-    drop_tables_directly ['group', 'select', 'values', 'distinct', 'distinct_select', 'order']
+    drop_tables_directly ['group', 'select', 'values', 'distinct', 'distincts_selects', 'order']
   end
 
   # create tables with reserved-word names and columns
@@ -63,6 +63,11 @@ class MysqlReservedWordTest < ActiveRecord::TestCase
     assert_nothing_raised { @connection.rename_column(:group, :order, :values) }
   end
 
+  # dump structure of table with reserved word name
+  def test_structure_dump
+    assert_nothing_raised { @connection.structure_dump  }
+  end
+
   # introspect table with reserved word name
   def test_introspect
     assert_nothing_raised { @connection.columns(:group) }
@@ -75,7 +80,7 @@ class MysqlReservedWordTest < ActiveRecord::TestCase
 
   #activerecord model class with reserved-word table name
   def test_activerecord_model
-    create_test_fixtures :select, :distinct, :group, :values, :distinct_select
+    create_test_fixtures :select, :distinct, :group, :values, :distincts_selects
     x = nil
     assert_nothing_raised { x = Group.new }
     x.order = 'x'
@@ -84,11 +89,12 @@ class MysqlReservedWordTest < ActiveRecord::TestCase
     assert_nothing_raised { x.save }
     assert_nothing_raised { Group.find_by_order('y') }
     assert_nothing_raised { Group.find(1) }
+    x = Group.find(1)
   end
 
   # has_one association with reserved-word table name
   def test_has_one_associations
-    create_test_fixtures :select, :distinct, :group, :values, :distinct_select
+    create_test_fixtures :select, :distinct, :group, :values, :distincts_selects
     v = nil
     assert_nothing_raised { v = Group.find(1).values }
     assert_equal 2, v.id
@@ -96,7 +102,7 @@ class MysqlReservedWordTest < ActiveRecord::TestCase
 
   # belongs_to association with reserved-word table name
   def test_belongs_to_associations
-    create_test_fixtures :select, :distinct, :group, :values, :distinct_select
+    create_test_fixtures :select, :distinct, :group, :values, :distincts_selects
     gs = nil
     assert_nothing_raised { gs = Select.find(2).groups }
     assert_equal gs.length, 2
@@ -105,7 +111,7 @@ class MysqlReservedWordTest < ActiveRecord::TestCase
 
   # has_and_belongs_to_many with reserved-word table name
   def test_has_and_belongs_to_many
-    create_test_fixtures :select, :distinct, :group, :values, :distinct_select
+    create_test_fixtures :select, :distinct, :group, :values, :distincts_selects
     s = nil
     assert_nothing_raised { s = Distinct.find(1).selects }
     assert_equal s.length, 2
@@ -124,15 +130,15 @@ class MysqlReservedWordTest < ActiveRecord::TestCase
   end
 
   def test_associations_work_with_reserved_words
-    assert_nothing_raised { Select.all.merge!(:includes => [:groups]).to_a }
+    assert_nothing_raised { Select.find(:all, :include => [:groups]) }
   end
 
   #the following functions were added to DRY test cases
 
   private
-  # custom fixture loader, uses FixtureSet#create_fixtures and appends base_path to the current file's path
+  # custom fixture loader, uses Fixtures#create_fixtures and appends base_path to the current file's path
   def create_test_fixtures(*fixture_names)
-    ActiveRecord::FixtureSet.create_fixtures(FIXTURES_ROOT + "/reserved_words", fixture_names)
+    ActiveRecord::Fixtures.create_fixtures(FIXTURES_ROOT + "/reserved_words", fixture_names)
   end
 
   # custom drop table, uses execute on connection to drop a table if it exists. note: escapes table_name

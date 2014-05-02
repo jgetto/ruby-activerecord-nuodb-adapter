@@ -13,17 +13,18 @@ class SerializationTest < ActiveRecord::TestCase
       :created_at     => Time.utc(2006, 8, 1),
       :awesome        => false,
       :preferences    => { :gem => '<strong>ruby</strong>' },
-      :alternative_id => nil,
-      :id             => nil
+      :alternative_id => nil
     }
   end
 
-  def test_include_root_in_json_is_false_by_default
-    assert_equal false, ActiveRecord::Base.include_root_in_json, "include_root_in_json should be false by default but was not"
+  def test_serialized_init_with
+    topic = Topic.allocate
+    topic.init_with('attributes' => { 'content' => '--- foo' })
+    assert_equal 'foo', topic.content
   end
 
   def test_serialize_should_be_reversible
-    FORMATS.each do |format|
+    for format in FORMATS
       @serialized = Contact.new.send("to_#{format}")
       contact = Contact.new.send("from_#{format}", @serialized)
 
@@ -32,7 +33,7 @@ class SerializationTest < ActiveRecord::TestCase
   end
 
   def test_serialize_should_allow_attribute_only_filtering
-    FORMATS.each do |format|
+    for format in FORMATS
       @serialized = Contact.new(@contact_attributes).send("to_#{format}", :only => [ :age, :name ])
       contact = Contact.new.send("from_#{format}", @serialized)
       assert_equal @contact_attributes[:name], contact.name, "For #{format}"
@@ -41,28 +42,12 @@ class SerializationTest < ActiveRecord::TestCase
   end
 
   def test_serialize_should_allow_attribute_except_filtering
-    FORMATS.each do |format|
+    for format in FORMATS
       @serialized = Contact.new(@contact_attributes).send("to_#{format}", :except => [ :age, :name ])
       contact = Contact.new.send("from_#{format}", @serialized)
       assert_nil contact.name, "For #{format}"
       assert_nil contact.age, "For #{format}"
       assert_equal @contact_attributes[:awesome], contact.awesome, "For #{format}"
     end
-  end
-
-  def test_include_root_in_json_allows_inheritance
-    original_root_in_json = ActiveRecord::Base.include_root_in_json
-    ActiveRecord::Base.include_root_in_json = true
-
-    klazz = Class.new(ActiveRecord::Base)
-    klazz.table_name = 'topics'
-    assert klazz.include_root_in_json
-
-    klazz.include_root_in_json = false
-    assert ActiveRecord::Base.include_root_in_json
-    assert !klazz.include_root_in_json
-    assert !klazz.new.include_root_in_json
-  ensure
-    ActiveRecord::Base.include_root_in_json = original_root_in_json
   end
 end

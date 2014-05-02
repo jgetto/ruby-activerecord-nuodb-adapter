@@ -30,11 +30,6 @@ class ReplyWithTitleObject < Reply
   def title; ReplyTitle.new; end
 end
 
-class Employee < ActiveRecord::Base
-  self.table_name = 'postgresql_arrays'
-  validates_uniqueness_of :nicknames
-end
-
 class UniquenessValidationTest < ActiveRecord::TestCase
   fixtures :topics, 'warehouse-things', :developers
 
@@ -54,20 +49,8 @@ class UniquenessValidationTest < ActiveRecord::TestCase
     assert !t2.save, "Shouldn't save t2 as unique"
     assert_equal ["has already been taken"], t2.errors[:title]
 
-    t2.title = "Now I am really also unique"
+    t2.title = "Now Im really also unique"
     assert t2.save, "Should now save t2 as unique"
-  end
-
-  def test_validates_uniqueness_with_nil_value
-    Topic.validates_uniqueness_of(:title)
-
-    t = Topic.new("title" => nil)
-    assert t.save, "Should save t as unique"
-
-    t2 = Topic.new("title" => nil)
-    assert !t2.valid?, "Shouldn't be valid"
-    assert !t2.save, "Shouldn't save t2 as unique"
-    assert_equal ["has already been taken"], t2.errors[:title]
   end
 
   def test_validates_uniqueness_with_validates
@@ -105,35 +88,11 @@ class UniquenessValidationTest < ActiveRecord::TestCase
     assert r3.valid?, "Saving r3"
   end
 
-  def test_validate_uniqueness_with_object_scope
-    Reply.validates_uniqueness_of(:content, :scope => :topic)
-
-    t = Topic.create("title" => "I'm unique!")
-
-    r1 = t.replies.create "title" => "r1", "content" => "hello world"
-    assert r1.valid?, "Saving r1"
-
-    r2 = t.replies.create "title" => "r2", "content" => "hello world"
-    assert !r2.valid?, "Saving r2 first time"
-  end
-
   def test_validate_uniqueness_with_composed_attribute_scope
     r1 = ReplyWithTitleObject.create "title" => "r1", "content" => "hello world"
     assert r1.valid?, "Saving r1"
 
     r2 = ReplyWithTitleObject.create "title" => "r1", "content" => "hello world"
-    assert !r2.valid?, "Saving r2 first time"
-  end
-
-  def test_validate_uniqueness_with_object_arg
-    Reply.validates_uniqueness_of(:topic)
-
-    t = Topic.create("title" => "I'm unique!")
-
-    r1 = t.replies.create "title" => "r1", "content" => "hello world"
-    assert r1.valid?, "Saving r1"
-
-    r2 = t.replies.create "title" => "r2", "content" => "hello world"
     assert !r2.valid?, "Saving r2 first time"
   end
 
@@ -206,14 +165,16 @@ class UniquenessValidationTest < ActiveRecord::TestCase
     assert t2.valid?, "should validate with nil"
     assert t2.save, "should save with nil"
 
-    t_utf8 = Topic.new("title" => "Я тоже уникальный!")
-    assert t_utf8.save, "Should save t_utf8 as unique"
+    with_kcode('UTF8') do
+      t_utf8 = Topic.new("title" => "Я тоже уникальный!")
+      assert t_utf8.save, "Should save t_utf8 as unique"
 
-    # If database hasn't UTF-8 character set, this test fails
-    if Topic.all.merge!(:select => 'LOWER(title) AS title').find(t_utf8).title == "я тоже уникальный!"
-      t2_utf8 = Topic.new("title" => "я тоже УНИКАЛЬНЫЙ!")
-      assert !t2_utf8.valid?, "Shouldn't be valid"
-      assert !t2_utf8.save, "Shouldn't save t2_utf8 as unique"
+      # If database hasn't UTF-8 character set, this test fails
+      if Topic.find(t_utf8, :select => 'LOWER(title) AS title').title == "я тоже уникальный!"
+        t2_utf8 = Topic.new("title" => "я тоже УНИКАЛЬНЫЙ!")
+        assert !t2_utf8.valid?, "Shouldn't be valid"
+        assert !t2_utf8.save, "Shouldn't save t2_utf8 as unique"
+      end
     end
   end
 
@@ -268,7 +229,7 @@ class UniquenessValidationTest < ActiveRecord::TestCase
   end
 
   def test_validate_case_sensitive_uniqueness_with_attribute_passed_as_integer
-    Topic.validates_uniqueness_of(:title, :case_sensitive => true)
+    Topic.validates_uniqueness_of(:title, :case_sensitve => true)
     Topic.create!('title' => 101)
 
     t2 = Topic.new('title' => 101)
@@ -282,10 +243,10 @@ class UniquenessValidationTest < ActiveRecord::TestCase
     assert i1.errors[:value].any?, "Should not be empty"
   end
 
-  def test_validates_uniqueness_inside_scoping
+  def test_validates_uniqueness_inside_with_scope
     Topic.validates_uniqueness_of(:title)
 
-    Topic.where(:author_name => "David").scoping do
+    Topic.send(:with_scope, :find => { :conditions => { :author_name => "David" } }) do
       t1 = Topic.new("title" => "I'm unique!", "author_name" => "Mary")
       assert t1.save
       t2 = Topic.new("title" => "I'm unique!", "author_name" => "David")
@@ -311,11 +272,13 @@ class UniquenessValidationTest < ActiveRecord::TestCase
   end
 
   def test_validate_uniqueness_with_limit_and_utf8
-    # Event.title is limited to 5 characters
-    e1 = Event.create(:title => "一二三四五")
-    assert e1.valid?, "Could not create an event with a unique, 5 character title"
-    e2 = Event.create(:title => "一二三四五六七八")
-    assert !e2.valid?, "Created an event whose title, with limit taken into account, is not unique"
+    with_kcode('UTF8') do
+      # Event.title is limited to 5 characters
+      e1 = Event.create(:title => "一二三四五")
+      assert e1.valid?, "Could not create an event with a unique, 5 character title"
+      e2 = Event.create(:title => "一二三四五六七八")
+      assert !e2.valid?, "Created an event whose title, with limit taken into account, is not unique"
+    end
   end
 
   def test_validate_straight_inheritance_uniqueness
@@ -347,33 +310,14 @@ class UniquenessValidationTest < ActiveRecord::TestCase
     assert_equal ["has already been taken"], w6.errors[:city], "Should have uniqueness message for city"
   end
 
-  def test_validate_uniqueness_with_conditions
-    Topic.validates_uniqueness_of :title, conditions: -> { where(approved: true) }
-    Topic.create("title" => "I'm a topic", "approved" => true)
-    Topic.create("title" => "I'm an unapproved topic", "approved" => false)
+  def test_allow_nil_is_false
+    Topic.validates_uniqueness_of(:title, :allow_nil => false)
+    Topic.destroy_all
 
-    t3 = Topic.new("title" => "I'm a topic", "approved" => true)
-    assert !t3.valid?, "t3 shouldn't be valid"
-
-    t4 = Topic.new("title" => "I'm an unapproved topic", "approved" => false)
-    assert t4.valid?, "t4 should be valid"
-  end
-
-  def test_validate_uniqueness_with_non_callable_conditions_is_not_supported
-    assert_raises(ArgumentError) {
-      Topic.validates_uniqueness_of :title, conditions: Topic.where(approved: true)
-    }
-  end
-
-  def test_validate_uniqueness_with_array_column
-    return skip "Uniqueness on arrays has only been tested in PostgreSQL so far." if !current_adapter? :PostgreSQLAdapter
-
-    e1 = Employee.create("nicknames" => ["john", "johnny"], "commission_by_quarter" => [1000, 1200])
-    assert e1.persisted?, "Saving e1"
-
-    e2 = Employee.create("nicknames" => ["john", "johnny"], "commission_by_quarter" => [2200])
-    assert !e2.persisted?, "e2 shouldn't be valid"
-    assert e2.errors[:nicknames].any?, "Should have errors for nicknames"
-    assert_equal ["has already been taken"], e2.errors[:nicknames], "Should have uniqueness message for nicknames"
+    Topic.create!("title" => nil)
+    topic = Topic.new("title" => nil)
+    assert !topic.valid?, "topic should not be valid"
+    assert topic.errors[:title].any?, "Should have errors for title"
+    assert_equal ["has already been taken"], topic.errors[:title], "Should have uniqueness message for title"
   end
 end

@@ -1,24 +1,27 @@
-require File.expand_path('../../../../load_paths', __FILE__)
+require File.expand_path('../../load_paths', __FILE__)
 
 require 'config'
 
-require 'active_support/testing/autorun'
+require 'test/unit'
 require 'stringio'
+require 'mocha/setup'
 
 require 'active_record'
-require 'cases/test_case'
 require 'active_support/dependencies'
-require 'active_support/logger'
 
 require 'support/config'
+
+#Trick the autoloader. This seems dumb.
+ActiveRecord::ConnectionAdapters::AbstractAdapter
 require 'support/connection'
 
 # TODO: Move all these random hacks into the ARTest namespace and into the support/ dir
 
-Thread.abort_on_exception = true
-
 # Show backtraces for deprecated behavior for quicker cleanup.
 ActiveSupport::Deprecation.debug = true
+
+# Enable Identity Map only when ENV['IM'] is set to "true"
+ActiveRecord::IdentityMap.enabled = (ENV['IM'] == "true")
 
 # Connect to the database
 ARTest.connect
@@ -34,7 +37,7 @@ def current_adapter?(*types)
 end
 
 def in_memory_db?
-  current_adapter?(:SQLite3Adapter) &&
+  current_adapter?(:SQLiteAdapter) &&
   ActiveRecord::Base.connection_pool.spec.config[:database] == ":memory:"
 end
 
@@ -56,11 +59,42 @@ ensure
   ActiveRecord::Base.default_timezone = old_zone
 end
 
+module ActiveRecord
+  class SQLCounter
+    cattr_accessor :ignored_sql
+    self.ignored_sql = [/^PRAGMA (?!(table_info))/, /^SELECT currval/, /^SELECT CAST/, /^SELECT @@IDENTITY/, /^SELECT @@ROWCOUNT/, /^SAVEPOINT/, /^ROLLBACK TO SAVEPOINT/, /^RELEASE SAVEPOINT/, /^SHOW max_identifier_length/, /^BEGIN/, /^COMMIT/]
+
+    # FIXME: this needs to be refactored so specific database can add their own
+    # ignored SQL.  This ignored SQL is for Oracle.
+    ignored_sql.concat [/^select .*nextval/i, /^SAVEPOINT/, /^ROLLBACK TO/, /^\s*select .* from all_triggers/im]
+
+    cattr_accessor :log
+    self.log = []
+
+    attr_reader :ignore
+
+    def initialize(ignore = self.class.ignored_sql)
+      @ignore   = ignore
+    end
+
+    def call(name, start, finish, message_id, values)
+      sql = values[:sql]
+
+      # FIXME: this seems bad. we should probably have a better way to indicate
+      # the query was cached
+      return if 'CACHE' == values[:name] || ignore.any? { |x| x =~ sql }
+      self.class.log << sql
+    end
+  end
+
+  ActiveSupport::Notifications.subscribe('sql.active_record', SQLCounter.new)
+end
+
 unless ENV['FIXTURE_DEBUG']
   module ActiveRecord::TestFixtures::ClassMethods
     def try_to_load_dependency_with_silence(*args)
       old = ActiveRecord::Base.logger.level
-      ActiveRecord::Base.logger.level = ActiveSupport::Logger::ERROR
+      ActiveRecord::Base.logger.level = Logger::ERROR
       try_to_load_dependency_without_silence(*args)
       ActiveRecord::Base.logger.level = old
     end
@@ -78,8 +112,8 @@ class ActiveSupport::TestCase
   self.use_instantiated_fixtures  = false
   self.use_transactional_fixtures = true
 
-  def create_fixtures(*fixture_set_names, &block)
-    ActiveRecord::FixtureSet.create_fixtures(ActiveSupport::TestCase.fixture_path, fixture_set_names, fixture_class_names, &block)
+  def create_fixtures(*table_names, &block)
+    ActiveRecord::Fixtures.create_fixtures(ActiveSupport::TestCase.fixture_path, table_names, fixture_class_names, &block)
   end
 end
 
@@ -116,36 +150,5 @@ class << Time
     block.call
   ensure
     @now = nil
-  end
-end
-
-module LogIntercepter
-  attr_accessor :logged, :intercepted
-  def self.extended(base)
-    base.logged = []
-  end
-  def log(sql, name, binds = [], &block)
-    if @intercepted
-      @logged << [sql, name, binds]
-      yield
-    else
-      super(sql, name,binds, &block)
-    end
-  end
-end
-
-module InTimeZone
-  private
-
-  def in_time_zone(zone)
-    old_zone  = Time.zone
-    old_tz    = ActiveRecord::Base.time_zone_aware_attributes
-
-    Time.zone = zone ? ActiveSupport::TimeZone[zone] : nil
-    ActiveRecord::Base.time_zone_aware_attributes = !zone.nil?
-    yield
-  ensure
-    Time.zone = old_zone
-    ActiveRecord::Base.time_zone_aware_attributes = old_tz
   end
 end

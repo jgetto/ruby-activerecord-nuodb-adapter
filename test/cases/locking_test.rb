@@ -7,10 +7,6 @@ require 'models/ship'
 require 'models/legacy_thing'
 require 'models/reference'
 require 'models/string_key_object'
-require 'models/car'
-require 'models/bulb'
-require 'models/engine'
-require 'models/wheel'
 require 'models/treasure'
 
 class LockWithoutDefault < ActiveRecord::Base; end
@@ -194,18 +190,10 @@ class OptimisticLockingTest < ActiveRecord::TestCase
   def test_lock_without_default_sets_version_to_zero
     t1 = LockWithoutDefault.new
     assert_equal 0, t1.lock_version
-
-    t1.save
-    t1 = LockWithoutDefault.find(t1.id)
-    assert_equal 0, t1.lock_version
   end
 
   def test_lock_with_custom_column_without_default_sets_version_to_zero
     t1 = LockWithCustomColumnWithoutDefault.new
-    assert_equal 0, t1.custom_lock_version
-
-    t1.save
-    t1 = LockWithCustomColumnWithoutDefault.find(t1.id)
     assert_equal 0, t1.custom_lock_version
   end
 
@@ -216,7 +204,7 @@ class OptimisticLockingTest < ActiveRecord::TestCase
     s.reload
     assert_equal "unchangeable name", s.name
 
-    s.update(name: "changed name")
+    s.update_attributes(:name => "changed name")
     s.reload
     assert_equal "unchangeable name", s.name
   end
@@ -238,21 +226,51 @@ class OptimisticLockingTest < ActiveRecord::TestCase
       assert_equal lock_version, p1.lock_version
     end
   end
+end
 
-  def test_polymorphic_destroy_with_dependencies_and_lock_version
-    car = Car.create!
+class SetLockingColumnTest < ActiveRecord::TestCase
+  def test_set_set_locking_column_with_value
+    k = Class.new( ActiveRecord::Base )
+    k.locking_column = "foo"
+    assert_equal "foo", k.locking_column
 
-    assert_difference 'car.wheels.count'  do
-      car.wheels << Wheel.create!
+    assert_deprecated do
+      k.set_locking_column "bar"
     end
-    assert_difference 'car.wheels.count', -1  do
-      car.destroy
+    assert_equal "bar", k.locking_column
+  end
+
+  def test_set_locking_column_with_block
+    k = Class.new( ActiveRecord::Base )
+    k.locking_column = 'foo'
+
+    assert_deprecated do
+      k.set_locking_column do
+        "lock_" + ActiveSupport::Deprecation.silence { original_locking_column }
+      end
     end
-    assert car.destroyed?
+    assert_equal "lock_foo", k.locking_column
+  end
+
+  def test_original_locking_column
+    k = Class.new(ActiveRecord::Base)
+    k.locking_column = "bar"
+
+    assert_deprecated do
+      assert_equal ActiveRecord::Locking::Optimistic::ClassMethods::DEFAULT_LOCKING_COLUMN, k.original_locking_column
+    end
+
+    k = Class.new(ActiveRecord::Base)
+    k.locking_column = "omg"
+    k.locking_column = "wtf"
+
+    assert_deprecated do
+      assert_equal "omg", k.original_locking_column
+    end
   end
 
   def test_removing_has_and_belongs_to_many_associations_upon_destroy
-    p = RichPerson.create! first_name: 'Jon'
+    p = RichPerson.create! :first_name => 'Jon'
     p.treasures.create!
     assert !p.treasures.empty?
     p.destroy
@@ -333,7 +351,7 @@ class OptimisticLockingWithSchemaChangeTest < ActiveRecord::TestCase
 
     def counter_test(model, expected_count)
       add_counter_column_to(model)
-      object = model.first
+      object = model.find(:first)
       assert_equal 0, object.test_count
       assert_equal 0, object.send(model.locking_column)
       yield object.id
@@ -350,6 +368,9 @@ end
 # is so cumbersome. Will deadlock Ruby threads if the underlying db.execute
 # blocks, so separate script called by Kernel#system is needed.
 # (See exec vs. async_exec in the PostgreSQL adapter.)
+
+# TODO: The Sybase, and OpenBase adapters currently have no support for pessimistic locking
+
 unless current_adapter?(:SybaseAdapter, :OpenBaseAdapter) || in_memory_db?
   class PessimisticLockingTest < ActiveRecord::TestCase
     self.use_transactional_fixtures = false
@@ -365,7 +386,18 @@ unless current_adapter?(:SybaseAdapter, :OpenBaseAdapter) || in_memory_db?
     def test_sane_find_with_lock
       assert_nothing_raised do
         Person.transaction do
-          Person.lock.find(1)
+          Person.find 1, :lock => true
+        end
+      end
+    end
+
+    # Test scoped lock.
+    def test_sane_find_with_scoped_lock
+      assert_nothing_raised do
+        Person.transaction do
+          Person.send(:with_scope, :find => { :lock => true }) do
+            Person.find 1
+          end
         end
       end
     end
@@ -376,7 +408,7 @@ unless current_adapter?(:SybaseAdapter, :OpenBaseAdapter) || in_memory_db?
       def test_eager_find_with_lock
         assert_nothing_raised do
           Person.transaction do
-            Person.includes(:readers).lock.find(1)
+            Person.find 1, :include => :readers, :lock => true
           end
         end
       end
@@ -418,6 +450,16 @@ unless current_adapter?(:SybaseAdapter, :OpenBaseAdapter) || in_memory_db?
       def test_no_locks_no_wait
         first, second = duel { Person.find 1 }
         assert first.end > second.end
+      end
+
+      # Hit by ruby deadlock detection since connection checkout is mutexed.
+      if RUBY_VERSION < '1.9.0'
+        def test_second_lock_waits
+          assert [0.2, 1, 5].any? { |zzz|
+            first, second = duel(zzz) { Person.find 1, :lock => true }
+            second.end > first.end
+          }
+        end
       end
 
       protected

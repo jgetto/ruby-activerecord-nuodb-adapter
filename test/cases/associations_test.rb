@@ -18,8 +18,6 @@ require 'models/ship'
 require 'models/liquid'
 require 'models/molecule'
 require 'models/electron'
-require 'models/man'
-require 'models/interest'
 
 class AssociationsTest < ActiveRecord::TestCase
   fixtures :accounts, :companies, :developers, :projects, :developers_projects,
@@ -31,7 +29,7 @@ class AssociationsTest < ActiveRecord::TestCase
     molecule.electrons.create(:name => 'electron_1')
     molecule.electrons.create(:name => 'electron_2')
 
-    liquids = Liquid.includes(:molecules => :electrons).references(:molecules).where('molecules.id is not null')
+    liquids = Liquid.includes(:molecules => :electrons).where('molecules.id is not null')
     assert_equal 1, liquids[0].molecules.length
   end
 
@@ -69,15 +67,15 @@ class AssociationsTest < ActiveRecord::TestCase
     ship = Ship.create!(:name => "The good ship Dollypop")
     part = ship.parts.create!(:name => "Mast")
     part.mark_for_destruction
-    ShipPart.find(part.id).update_columns(name: 'Deck')
+    ShipPart.find(part.id).update_column(:name, 'Deck')
     ship.parts.send(:load_target)
     assert_equal 'Deck', ship.parts[0].name
   end
 
 
   def test_include_with_order_works
-    assert_nothing_raised {Account.all.merge!(:order => 'id', :includes => :firm).first}
-    assert_nothing_raised {Account.all.merge!(:order => :id, :includes => :firm).first}
+    assert_nothing_raised {Account.find(:first, :order => 'id', :include => :firm)}
+    assert_nothing_raised {Account.find(:first, :order => :id, :include => :firm)}
   end
 
   def test_bad_collection_keys
@@ -88,7 +86,7 @@ class AssociationsTest < ActiveRecord::TestCase
 
   def test_should_construct_new_finder_sql_after_create
     person = Person.new :first_name => 'clark'
-    assert_equal [], person.readers.to_a
+    assert_equal [], person.readers.all
     person.save!
     reader = Reader.create! :person => person, :post => Post.new(:title => "foo", :body => "bar")
     assert person.readers.find(reader.id)
@@ -97,7 +95,7 @@ class AssociationsTest < ActiveRecord::TestCase
   def test_force_reload
     firm = Firm.new("name" => "A New Firm, Inc")
     firm.save
-    firm.clients.each {} # forcing to load all clients
+    firm.clients.each {|c|} # forcing to load all clients
     assert firm.clients.empty?, "New firm shouldn't have client objects"
     assert_equal 0, firm.clients.size, "New firm should have 0 clients"
 
@@ -112,7 +110,7 @@ class AssociationsTest < ActiveRecord::TestCase
   end
 
   def test_using_limitable_reflections_helper
-    using_limitable_reflections = lambda { |reflections| Tagging.all.send :using_limitable_reflections?, reflections }
+    using_limitable_reflections = lambda { |reflections| Tagging.scoped.send :using_limitable_reflections?, reflections }
     belongs_to_reflections = [Tagging.reflect_on_association(:tag), Tagging.reflect_on_association(:super_tag)]
     has_many_reflections = [Tag.reflect_on_association(:taggings), Developer.reflect_on_association(:projects)]
     mixed_reflections = (belongs_to_reflections + has_many_reflections).uniq
@@ -129,11 +127,6 @@ class AssociationsTest < ActiveRecord::TestCase
       assert_queries(0) { assert_not_nil firm.clients.each {} }
       assert_queries(1) { assert_not_nil firm.clients(true).each {} }
     end
-  end
-
-  def test_association_with_references
-    firm = companies(:first_firm)
-    assert_equal ['foo'], firm.association_with_references.references_values
   end
 
 end
@@ -174,23 +167,11 @@ class AssociationProxyTest < ActiveRecord::TestCase
     assert_equal 1, josh.posts.size
   end
 
-  def test_append_behaves_like_push
-    josh = Author.new(:name => "Josh")
-    josh.posts.append Post.new(:title => "New on Edge", :body => "More cool stuff!")
-    assert josh.posts.loaded?
-    assert_equal 1, josh.posts.size
-  end
-
-  def test_prepend_is_not_defined
-    josh = Author.new(:name => "Josh")
-    assert_raises(NoMethodError) { josh.posts.prepend Post.new }
-  end
-
   def test_save_on_parent_does_not_load_target
     david = developers(:david)
 
     assert !david.projects.loaded?
-    david.update_columns(created_at: Time.now)
+    david.update_column(:created_at, Time.now)
     assert !david.projects.loaded?
   end
 
@@ -217,7 +198,7 @@ class AssociationProxyTest < ActiveRecord::TestCase
     assert_equal post.body, "More cool stuff!"
   end
 
-  def test_reload_returns_association
+  def test_reload_returns_assocition
     david = developers(:david)
     assert_nothing_raised do
       assert_equal david.projects, david.projects.reload.reload
@@ -228,36 +209,10 @@ class AssociationProxyTest < ActiveRecord::TestCase
     david = developers(:david)
     assert_equal david.association(:projects), david.projects.proxy_association
   end
-
-  def test_scoped_allows_conditions
-    assert developers(:david).projects.merge!(where: 'foo').where_values.include?('foo')
-  end
-
-  test "getting a scope from an association" do
-    david = developers(:david)
-
-    assert david.projects.scope.is_a?(ActiveRecord::Relation)
-    assert_equal david.projects, david.projects.scope
-  end
-
-  test "proxy object is cached" do
-    david = developers(:david)
-    assert david.projects.equal?(david.projects)
-  end
-
-  test "inverses get set of subsets of the association" do
-    man = Man.create
-    man.interests.create
-
-    man = Man.find(man.id)
-
-    assert_queries(1) do
-      assert_equal man, man.interests.where("1=1").first.man
-    end
-  end
 end
 
 class OverridingAssociationsTest < ActiveRecord::TestCase
+  class Person < ActiveRecord::Base; end
   class DifferentPerson < ActiveRecord::Base; end
 
   class PeopleList < ActiveRecord::Base
@@ -317,14 +272,6 @@ class OverridingAssociationsTest < ActiveRecord::TestCase
       PeopleList.reflect_on_association(:has_one),
       DifferentPeopleList.reflect_on_association(:has_one)
     )
-  end
-
-  def test_requires_symbol_argument
-    assert_raises ArgumentError do
-      Class.new(Post) do
-        belongs_to "author"
-      end
-    end
   end
 end
 

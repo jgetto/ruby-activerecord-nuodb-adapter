@@ -3,7 +3,6 @@ require 'models/topic'    # For booleans
 require 'models/pirate'   # For timestamps
 require 'models/parrot'
 require 'models/person'   # For optimistic locking
-require 'models/aircraft'
 
 class Pirate # Just reopening it, not defining it
   attr_accessor :detected_changes_in_after_update # Boolean for if changes are detected
@@ -12,7 +11,7 @@ class Pirate # Just reopening it, not defining it
   after_update :check_changes
 
 private
-  # after_save/update and the model itself
+  # after_save/update in sweepers, observers, and the model itself
   # can end up checking dirty status and acting on the results
   def check_changes
     if self.changed?
@@ -27,8 +26,6 @@ class NumericData < ActiveRecord::Base
 end
 
 class DirtyTest < ActiveRecord::TestCase
-  include InTimeZone
-
   # Dummy to force column loads so query counts are clean.
   def setup
     Person.create :first_name => 'foo'
@@ -125,6 +122,7 @@ class DirtyTest < ActiveRecord::TestCase
   end
 
   def test_time_attributes_changes_without_time_zone
+
     target = Class.new(ActiveRecord::Base)
     target.table_name = 'pirates'
 
@@ -211,13 +209,11 @@ class DirtyTest < ActiveRecord::TestCase
       target.table_name = 'topics'
 
       topic = target.create
-      assert_nil topic.written_on
+      assert_equal nil, topic.written_on
 
-      ["", nil].each do |value|
-        topic.written_on = value
-        assert_nil topic.written_on
-        assert !topic.written_on_changed?
-      end
+      topic.written_on = ""
+      assert_equal nil, topic.written_on
+      assert !topic.written_on_changed?
     end
   end
 
@@ -245,21 +241,6 @@ class DirtyTest < ActiveRecord::TestCase
     assert !pirate.changed?
   end
 
-  def test_float_zero_to_string_zero_not_marked_as_changed
-    data = NumericData.new :temperature => 0.0
-    data.save!
-
-    assert_not data.changed?
-
-    data.temperature = '0'
-    assert_empty data.changes
-
-    data.temperature = '0.0'
-    assert_empty data.changes
-
-    data.temperature = '0.00'
-    assert_empty data.changes
-  end
 
   def test_zero_to_blank_marked_as_changed
     pirate = Pirate.new
@@ -345,12 +326,12 @@ class DirtyTest < ActiveRecord::TestCase
     pirate = Pirate.new(:catchphrase => 'foo')
     old_updated_on = 1.hour.ago.beginning_of_day
 
-    with_partial_writes Pirate, false do
+    with_partial_updates Pirate, false do
       assert_queries(2) { 2.times { pirate.save! } }
-      Pirate.where(id: pirate.id).update_all(:updated_on => old_updated_on)
+      Pirate.update_all({ :updated_on => old_updated_on }, :id => pirate.id)
     end
 
-    with_partial_writes Pirate, true do
+    with_partial_updates Pirate, true do
       assert_queries(0) { 2.times { pirate.save! } }
       assert_equal old_updated_on, pirate.reload.updated_on
 
@@ -363,12 +344,12 @@ class DirtyTest < ActiveRecord::TestCase
     person = Person.new(:first_name => 'foo')
     old_lock_version = 1
 
-    with_partial_writes Person, false do
+    with_partial_updates Person, false do
       assert_queries(2) { 2.times { person.save! } }
-      Person.where(id: person.id).update_all(:first_name => 'baz')
+      Person.update_all({ :first_name => 'baz' }, :id => person.id)
     end
 
-    with_partial_writes Person, true do
+    with_partial_updates Person, true do
       assert_queries(0) { 2.times { person.save! } }
       assert_equal old_lock_version, person.reload.lock_version
 
@@ -442,8 +423,8 @@ class DirtyTest < ActiveRecord::TestCase
     assert !pirate.catchphrase_changed?
   end
 
-  def test_save_should_store_serialized_attributes_even_with_partial_writes
-    with_partial_writes(Topic) do
+  def test_save_should_store_serialized_attributes_even_with_partial_updates
+    with_partial_updates(Topic) do
       topic = Topic.create!(:content => {:a => "a"})
       topic.content[:b] = "b"
       #assert topic.changed? # Known bug, will fail
@@ -455,7 +436,7 @@ class DirtyTest < ActiveRecord::TestCase
   end
 
   def test_save_always_should_update_timestamps_when_serialized_attributes_are_present
-    with_partial_writes(Topic) do
+    with_partial_updates(Topic) do
       topic = Topic.create!(:content => {:a => "a"})
       topic.save!
 
@@ -468,11 +449,11 @@ class DirtyTest < ActiveRecord::TestCase
     end
   end
 
-  def test_save_should_not_save_serialized_attribute_with_partial_writes_if_not_present
-    with_partial_writes(Topic) do
+  def test_save_should_not_save_serialized_attribute_with_partial_updates_if_not_present
+    with_partial_updates(Topic) do
       Topic.create!(:author_name => 'Bill', :content => {:a => "a"})
       topic = Topic.select('id, author_name').first
-      topic.update_columns author_name: 'John'
+      topic.update_column :author_name, 'John'
       topic = Topic.first
       assert_not_nil topic.content
     end
@@ -536,7 +517,7 @@ class DirtyTest < ActiveRecord::TestCase
     assert !pirate.previous_changes.key?('created_on')
 
     pirate = Pirate.find_by_catchphrase("Thar She Blows!")
-    pirate.update(catchphrase: "Ahoy!")
+    pirate.update_attributes(:catchphrase => "Ahoy!")
 
     assert_equal 2, pirate.previous_changes.size
     assert_equal ["Thar She Blows!", "Ahoy!"], pirate.previous_changes['catchphrase']
@@ -584,37 +565,13 @@ class DirtyTest < ActiveRecord::TestCase
     end
   end
 
-  test "partial insert" do
-    with_partial_writes Person do
-      jon = nil
-      assert_sql(/first_name/i) do
-        jon = Person.create! first_name: 'Jon'
-      end
-
-      assert ActiveRecord::SQLCounter.log_all.none? { |sql| sql =~ /followers_count/ }
-
-      jon.reload
-      assert_equal 'Jon', jon.first_name
-      assert_equal 0, jon.followers_count
-      assert_not_nil jon.id
-    end
-  end
-
-  test "partial insert with empty values" do
-    with_partial_writes Aircraft do
-      a = Aircraft.create!
-      a.reload
-      assert_not_nil a.id
-    end
-  end
-
   private
-    def with_partial_writes(klass, on = true)
-      old = klass.partial_writes?
-      klass.partial_writes = on
+    def with_partial_updates(klass, on = true)
+      old = klass.partial_updates?
+      klass.partial_updates = on
       yield
     ensure
-      klass.partial_writes = old
+      klass.partial_updates = old
     end
 
     def check_pirate_after_save_failure(pirate)
@@ -622,5 +579,17 @@ class DirtyTest < ActiveRecord::TestCase
       assert pirate.parrot_id_changed?
       assert_equal %w(parrot_id), pirate.changed
       assert_nil pirate.parrot_id_was
+    end
+
+    def in_time_zone(zone)
+      old_zone  = Time.zone
+      old_tz    = ActiveRecord::Base.time_zone_aware_attributes
+
+      Time.zone = zone ? ActiveSupport::TimeZone[zone] : nil
+      ActiveRecord::Base.time_zone_aware_attributes = !zone.nil?
+      yield
+    ensure
+      Time.zone = old_zone
+      ActiveRecord::Base.time_zone_aware_attributes = old_tz
     end
 end

@@ -65,6 +65,16 @@ class DeveloperWithSymbolsForKeys < ActiveRecord::Base
     :foreign_key => "developer_id"
 end
 
+class DeveloperWithCounterSQL < ActiveRecord::Base
+  self.table_name = 'developers'
+  has_and_belongs_to_many :projects,
+    :class_name => "DeveloperWithCounterSQL",
+    :join_table => "developers_projects",
+    :association_foreign_key => "project_id",
+    :foreign_key => "developer_id",
+    :counter_sql => proc { "SELECT COUNT(*) AS count_all FROM projects INNER JOIN developers_projects ON projects.id = developers_projects.project_id WHERE developers_projects.developer_id =#{id}" }
+end
+
 class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
   fixtures :accounts, :companies, :categories, :posts, :categories_posts, :developers, :projects, :developers_projects,
            :parrots, :pirates, :parrots_pirates, :treasures, :price_estimates, :tags, :taggings
@@ -111,6 +121,11 @@ class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
     assert !active_record.developers.empty?
     assert_equal 3, active_record.developers.size
     assert active_record.developers.include?(david)
+  end
+
+  def test_triple_equality
+    assert !(Array === Developer.find(1).projects)
+    assert Developer.find(1).projects === Array
   end
 
   def test_adding_single
@@ -303,7 +318,7 @@ class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
     dev.projects << projects(:active_record)
 
     assert_equal 3, dev.projects.size
-    assert_equal 1, dev.projects.distinct.size
+    assert_equal 1, dev.projects.uniq.size
   end
 
   def test_uniq_before_the_fact
@@ -323,12 +338,6 @@ class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
     assert_equal 3, project.developers.size
   end
 
-  def test_uniq_when_association_already_loaded
-    project = projects(:active_record)
-    project.developers << [ developers(:jamis), developers(:david), developers(:jamis), developers(:david) ]
-    assert_equal 3, Project.includes(:developers).find(project.id).developers.size
-  end
-
   def test_deleting
     david = Developer.find(1)
     active_record = Project.find(1)
@@ -346,9 +355,34 @@ class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
   def test_deleting_array
     david = Developer.find(1)
     david.projects.reload
-    david.projects.delete(Project.all.to_a)
+    david.projects.delete(Project.find(:all))
     assert_equal 0, david.projects.size
     assert_equal 0, david.projects(true).size
+  end
+
+  def test_deleting_with_sql
+    david = Developer.find(1)
+    active_record = Project.find(1)
+    active_record.developers.reload
+    assert_equal 3, active_record.developers_by_sql.size
+
+    active_record.developers_by_sql.delete(david)
+    assert_equal 2, active_record.developers_by_sql(true).size
+  end
+
+  def test_deleting_array_with_sql
+    active_record = Project.find(1)
+    active_record.developers.reload
+    assert_equal 3, active_record.developers_by_sql.size
+
+    active_record.developers_by_sql.delete(Developer.find(:all))
+    assert_equal 0, active_record.developers_by_sql(true).size
+  end
+
+  def test_deleting_all_with_sql
+    project = Project.find(1)
+    project.developers_by_sql.delete_all
+    assert_equal 0, project.developers_by_sql.size
   end
 
   def test_deleting_all
@@ -388,7 +422,7 @@ class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
   def test_destroying_many
     david = Developer.find(1)
     david.projects.reload
-    projects = Project.all.to_a
+    projects = Project.all
 
     assert_no_difference "Project.count" do
       david.projects.destroy(*projects)
@@ -437,6 +471,13 @@ class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
     assert george.treasures(true).empty?
   end
 
+  def test_deprecated_push_with_attributes_was_removed
+    jamis = developers(:jamis)
+    assert_raise(NoMethodError) do
+      jamis.projects.push_with_attributes(projects(:action_controller), :joined_on => Date.today)
+    end
+  end
+
   def test_associations_with_conditions
     assert_equal 3, projects(:active_record).developers.size
     assert_equal 1, projects(:active_record).developers_named_david.size
@@ -462,7 +503,7 @@ class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
 
   def test_include_uses_array_include_after_loaded
     project = projects(:active_record)
-    project.developers.load_target
+    project.developers.class # force load target
 
     developer = project.developers.first
 
@@ -492,23 +533,62 @@ class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
     assert ! project.developers.include?(developer)
   end
 
+  def test_find_in_association_with_custom_finder_sql
+    assert_equal developers(:david), projects(:active_record).developers_with_finder_sql.find(developers(:david).id), "SQL find"
+
+    active_record = projects(:active_record)
+    active_record.developers_with_finder_sql.reload
+    assert_equal developers(:david), active_record.developers_with_finder_sql.find(developers(:david).id), "Ruby find"
+  end
+
+  def test_find_in_association_with_custom_finder_sql_and_multiple_interpolations
+    # interpolate once:
+    assert_equal [developers(:david), developers(:jamis), developers(:poor_jamis)], projects(:active_record).developers_with_finder_sql, "first interpolation"
+    # interpolate again, for a different project id
+    assert_equal [developers(:david)], projects(:action_controller).developers_with_finder_sql, "second interpolation"
+  end
+
+  def test_find_in_association_with_custom_finder_sql_and_string_id
+    assert_equal developers(:david), projects(:active_record).developers_with_finder_sql.find(developers(:david).id.to_s), "SQL find"
+  end
+
   def test_find_with_merged_options
     assert_equal 1, projects(:active_record).limited_developers.size
-    assert_equal 1, projects(:active_record).limited_developers.to_a.size
-    assert_equal 3, projects(:active_record).limited_developers.limit(nil).to_a.size
+    assert_equal 1, projects(:active_record).limited_developers.find(:all).size
+    assert_equal 3, projects(:active_record).limited_developers.find(:all, :limit => nil).size
   end
 
   def test_dynamic_find_should_respect_association_order
     # Developers are ordered 'name DESC, id DESC'
     high_id_jamis = projects(:active_record).developers.create(:name => 'Jamis')
 
-    assert_equal high_id_jamis, projects(:active_record).developers.merge(:where => "name = 'Jamis'").first
+    assert_equal high_id_jamis, projects(:active_record).developers.find(:first, :conditions => "name = 'Jamis'")
     assert_equal high_id_jamis, projects(:active_record).developers.find_by_name('Jamis')
   end
 
-  def test_find_should_prepend_to_association_order
+  def test_dynamic_find_all_should_respect_association_order
+    # Developers are ordered 'name DESC, id DESC'
+    low_id_jamis = developers(:jamis)
+    middle_id_jamis = developers(:poor_jamis)
+    high_id_jamis = projects(:active_record).developers.create(:name => 'Jamis')
+
+    assert_equal [high_id_jamis, middle_id_jamis, low_id_jamis], projects(:active_record).developers.find(:all, :conditions => "name = 'Jamis'")
+    assert_equal [high_id_jamis, middle_id_jamis, low_id_jamis], projects(:active_record).developers.find_all_by_name('Jamis')
+  end
+
+  def test_find_should_append_to_association_order
     ordered_developers = projects(:active_record).developers.order('projects.id')
-    assert_equal ['projects.id', 'developers.name desc, developers.id desc'], ordered_developers.order_values
+    assert_equal ['developers.name desc, developers.id desc', 'projects.id'], ordered_developers.order_values
+  end
+
+  def test_dynamic_find_all_should_respect_association_limit
+    assert_equal 1, projects(:active_record).limited_developers.find(:all, :conditions => "name = 'Jamis'").length
+    assert_equal 1, projects(:active_record).limited_developers.find_all_by_name('Jamis').length
+  end
+
+  def test_dynamic_find_all_order_should_override_association_limit
+    assert_equal 2, projects(:active_record).limited_developers.find(:all, :conditions => "name = 'Jamis'", :limit => 9_000).length
+    assert_equal 2, projects(:active_record).limited_developers.find_all_by_name('Jamis', :limit => 9_000).length
   end
 
   def test_dynamic_find_all_should_respect_readonly_access
@@ -529,7 +609,7 @@ class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
   end
 
   def test_find_in_association_with_options
-    developers = projects(:active_record).developers.to_a
+    developers = projects(:active_record).developers.all
     assert_equal 3, developers.size
 
     assert_equal developers(:poor_jamis), projects(:active_record).developers.where("salary < 10000").first
@@ -558,7 +638,7 @@ class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
   end
 
   def test_consider_type
-    developer = Developer.first
+    developer = Developer.find(:first)
     special_project = SpecialProject.create("name" => "Special Project")
 
     other_project = developer.projects.first
@@ -575,7 +655,7 @@ class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
     project = SpecialProject.create("name" => "Special Project")
     assert developer.save
     developer.projects << project
-    developer.update_columns("name" => "Bruza")
+    developer.update_column("name", "Bruza")
     assert_equal 1, Developer.connection.select_value(<<-end_sql).to_i
       SELECT count(*) FROM developers_projects
       WHERE project_id = #{project.id}
@@ -593,7 +673,7 @@ class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
     categories(:technology).select_testing_posts(true).each do |o|
       assert_respond_to o, :correctness_marker
     end
-    assert_respond_to categories(:technology).select_testing_posts.first, :correctness_marker
+    assert_respond_to categories(:technology).select_testing_posts.find(:first), :correctness_marker
   end
 
   def test_habtm_selects_all_columns_by_default
@@ -605,13 +685,7 @@ class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
   end
 
   def test_join_table_alias
-    assert_equal(
-      3,
-      Developer.references(:developers_projects_join).merge(
-        :includes => {:projects => :developers},
-        :where => 'developers_projects_join.joined_on IS NOT NULL'
-      ).to_a.size
-    )
+    assert_equal 3, Developer.find(:all, :include => {:projects => :developers}, :conditions => 'developers_projects_join.joined_on IS NOT NULL').size
   end
 
   def test_join_with_group
@@ -621,18 +695,12 @@ class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
     end
     Project.columns.each { |c| group << "projects.#{c.name}" }
 
-    assert_equal(
-      3,
-      Developer.references(:developers_projects_join).merge(
-        :includes => {:projects => :developers}, :where => 'developers_projects_join.joined_on IS NOT NULL',
-        :group => group.join(",")
-      ).to_a.size
-    )
+    assert_equal 3, Developer.find(:all, :include => {:projects => :developers}, :conditions => 'developers_projects_join.joined_on IS NOT NULL', :group => group.join(",")).size
   end
 
   def test_find_grouped
-    all_posts_from_category1 = Post.all.merge!(:where => "category_id = 1", :joins => :categories).to_a
-    grouped_posts_of_category1 = Post.all.merge!(:where => "category_id = 1", :group => "author_id", :select => 'count(posts.id) as posts_count', :joins => :categories).to_a
+    all_posts_from_category1 = Post.find(:all, :conditions => "category_id = 1", :joins => :categories)
+    grouped_posts_of_category1 = Post.find(:all, :conditions => "category_id = 1", :group => "author_id", :select => 'count(posts.id) as posts_count', :joins => :categories)
     assert_equal 5, all_posts_from_category1.size
     assert_equal 2, grouped_posts_of_category1.size
   end
@@ -706,13 +774,15 @@ class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
 
     assert_equal 1, project.developers.size
     assert_equal 1, developer.projects.size
-    assert_equal developer, project.developers.first
-    assert_equal project, developer.projects.first
+    assert_equal developer, project.developers.find(:first)
+    assert_equal project, developer.projects.find(:first)
   end
 
   def test_self_referential_habtm_without_foreign_key_set_should_raise_exception
     assert_raise(ActiveRecord::HasAndBelongsToManyAssociationForeignKeyNeeded) {
-      SelfMember.new.friends
+      Member.class_eval do
+        has_and_belongs_to_many :friends, :class_name => "Member", :join_table => "member_friends"
+      end
     }
   end
 
@@ -722,14 +792,42 @@ class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
     assert Category.find(1).posts_with_authors_sorted_by_author_id.find_by_title('Welcome to the weblog')
   end
 
+  def test_counting_on_habtm_association_and_not_array
+    david = Developer.find(1)
+    # Extra parameter just to make sure we aren't falling back to
+    # Array#count in Ruby >=1.8.7, which would raise an ArgumentError
+    assert_nothing_raised { david.projects.count(:all, :conditions => '1=1') }
+  end
+
   def test_count
     david = Developer.find(1)
     assert_equal 2, david.projects.count
   end
 
+  def test_count_with_counter_sql
+    developer  = DeveloperWithCounterSQL.create(:name => 'tekin')
+    developer.project_ids = [projects(:active_record).id]
+    developer.save
+    developer.reload
+    assert_equal 1, developer.projects.count
+  end
+
+  def test_counting_should_not_fire_sql_if_parent_is_unsaved
+    assert_no_queries do
+      assert_equal 0, Developer.new.projects.count
+    end
+  end
+
+  unless current_adapter?(:PostgreSQLAdapter)
+    def test_count_with_finder_sql
+      assert_equal 3, projects(:active_record).developers_with_finder_sql.count
+      assert_equal 3, projects(:active_record).developers_with_multiline_finder_sql.count
+    end
+  end
+
   def test_association_proxy_transaction_method_starts_transaction_in_association_class
     Post.expects(:transaction)
-    Category.first.posts.transaction do
+    Category.find(:first).posts.transaction do
       # nothing
     end
   end
@@ -739,14 +837,11 @@ class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
     # clear cache possibly created by other tests
     david.projects.reset_column_information
 
-    assert_queries(:any) { david.projects.columns }
-    assert_no_queries { david.projects.columns }
+    assert_queries(1) { david.projects.columns; david.projects.columns }
 
     ## and again to verify that reset_column_information clears the cache correctly
     david.projects.reset_column_information
-
-    assert_queries(:any) { david.projects.columns }
-    assert_no_queries { david.projects.columns }
+    assert_queries(1) { david.projects.columns; david.projects.columns }
   end
 
   def test_attributes_are_being_set_when_initialized_from_habm_association_with_where_clause
@@ -765,15 +860,4 @@ class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
     developer = project.developers.build
     assert project.developers.include?(developer)
   end
-
-  test "has and belongs to many associations on new records use null relations" do
-    projects = Developer.new.projects
-    assert_no_queries do
-      assert_equal [], projects
-      assert_equal [], projects.where(title: 'omg')
-      assert_equal [], projects.pluck(:title)
-      assert_equal 0, projects.count
-    end
-  end
-
 end
