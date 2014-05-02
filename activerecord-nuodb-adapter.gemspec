@@ -18,6 +18,7 @@ Gem::Specification.new do |gem|
   gem.add_development_dependency('rdoc', '~> 3.10')
   gem.add_dependency('nuodb', '~> 2.0.3')
 
+
   gem.files = `git ls-files`.split($\)
   gem.test_files = gem.files.grep(%r{^(test|spec|features)/})
   gem.require_paths = %w(lib)
